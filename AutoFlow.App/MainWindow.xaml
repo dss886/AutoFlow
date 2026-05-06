@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:AutomationHost.App"
         mc:Ignorable="d"
         Title="AutoFlow - Windows 自动化脚本工具"
+        Icon="Assets/AppIcon.png"
         Width="1100"
         Height="720"
         MinWidth="960"

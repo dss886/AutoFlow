@@ -18,6 +18,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private string _logOutput = string.Empty;
     private string _runStatusText = "空闲";
     private string _statusMessage = "就绪";
+    private bool _allowExit;
 
     public MainWindow()
     {
@@ -119,7 +120,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (SelectedScript is null)
         {
-            MessageBox.Show(this, "请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Windows.MessageBox.Show(this, "请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -154,7 +155,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (SelectedScript is null)
         {
-            MessageBox.Show(this, "请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Windows.MessageBox.Show(this, "请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -170,6 +171,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _runnerService.Stop();
         _fileSystemWatcher.Dispose();
         base.OnClosed(e);
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (!_allowExit)
+        {
+            e.Cancel = true;
+            Hide();
+            return;
+        }
+
+        base.OnClosing(e);
     }
 
     private void LoadScripts()
@@ -236,5 +249,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public void PrepareForExit()
+    {
+        _allowExit = true;
     }
 }
