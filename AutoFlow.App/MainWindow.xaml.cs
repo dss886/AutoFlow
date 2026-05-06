@@ -16,6 +16,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly FileSystemWatcher _fileSystemWatcher;
     private ScriptDefinition? _selectedScript;
     private string _logOutput = string.Empty;
+    private string _runStatusText = "空闲";
     private string _statusMessage = "就绪";
 
     public MainWindow()
@@ -64,14 +65,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             _selectedScript = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(SelectedScriptSummary));
         }
     }
 
-    public string SelectedScriptSummary =>
-        SelectedScript is null
-            ? "请选择一个脚本。脚本使用外部编辑器保存到固定目录后，程序会自动识别。"
-            : $"脚本名称: {SelectedScript.Name}  |  文件: {SelectedScript.FileName}  |  状态: {SelectedScript.StatusText}\n{SelectedScript.Description}";
+    public string RunStatusText
+    {
+        get => _runStatusText;
+        set
+        {
+            if (_runStatusText == value)
+            {
+                return;
+            }
+
+            _runStatusText = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string LogOutput
     {
@@ -105,12 +115,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    private void RefreshScriptsButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        LoadScripts();
-        AppendLog("脚本列表已刷新。");
-    }
-
     private async void RunButton_OnClick(object sender, RoutedEventArgs e)
     {
         if (SelectedScript is null)
@@ -126,6 +130,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             AppendLog($"启动脚本失败: {ex.Message}");
+            RunStatusText = "启动失败";
             StatusMessage = "启动失败";
         }
     }
@@ -214,7 +219,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
             }
 
-            OnPropertyChanged(nameof(SelectedScriptSummary));
+            RunStatusText = isRunning ? "运行中" : "空闲";
             StatusMessage = isRunning ? "脚本运行中" : "就绪";
         });
     }

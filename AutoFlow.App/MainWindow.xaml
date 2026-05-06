@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AutomationHost.App"
         mc:Ignorable="d"
-        Title="AutoFlow - Windows 自动化脚本宿主"
+        Title="AutoFlow - Windows 自动化脚本工具"
         Width="1100"
         Height="720"
         MinWidth="960"
@@ -31,22 +31,22 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
-                    <TextBlock FontSize="22" FontWeight="SemiBold" Text="AutoFlow - Windows 自动化脚本宿主" />
-                    <TextBlock Margin="0,8,0,0"
-                               Foreground="#FF4A5568"
-                               Text="使用 Lua 脚本编写和执行自动化任务。" />
-                    <TextBlock Margin="0,8,0,0" TextWrapping="Wrap">
-                        <Run Text="脚本目录: " />
-                        <Run Text="{Binding ScriptsDirectory, Mode=OneWay}" FontFamily="Consolas" />
-                    </TextBlock>
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="AutoFlow - Windows 自动化脚本工具" />
+                    <TextBlock 
+                        FontSize="14"
+                        Margin="0,12,0,0"
+                        Foreground="#FF4A5568"
+                        Text="使用 Lua 编写脚本，控制键盘和鼠标执行自动化任务。" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Orientation="Horizontal">
-                    <Button Width="110" Margin="0,0,8,0" Click="OpenScriptsFolderButton_OnClick" Content="打开脚本目录" />
-                    <Button Width="110" Click="RefreshScriptsButton_OnClick" Content="刷新脚本列表" />
+                    <Button Width="124"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Click="OpenScriptsFolderButton_OnClick"
+                            Content="打开脚本目录" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -73,37 +73,49 @@
 
                     <ListBox x:Name="ScriptsListBox"
                              BorderThickness="0"
+                             ScrollViewer.CanContentScroll="False"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ItemContainerStyle="{StaticResource FlatListBoxItemStyle}"
                              ItemsSource="{Binding Scripts}"
                              SelectedItem="{Binding SelectedScript, Mode=TwoWay}">
+                        <ListBox.Resources>
+                            <Style TargetType="ScrollBar"
+                                   BasedOn="{StaticResource ModernVerticalScrollBarStyle}" />
+                        </ListBox.Resources>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="0,0,0,8"
-                                        Padding="12"
-                                        Background="#FFF8FAFC"
-                                        BorderBrush="#FFE2E8F0"
-                                        BorderThickness="1"
-                                        CornerRadius="6">
+                                <Border Style="{StaticResource ScriptItemCardStyle}">
                                     <StackPanel>
-                                        <DockPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
                                             <TextBlock FontSize="16"
                                                        FontWeight="SemiBold"
+                                                       Margin="0,0,12,0"
+                                                       TextTrimming="CharacterEllipsis"
                                                        Text="{Binding Name}" />
-                                            <Border DockPanel.Dock="Right"
+                                            <Border Grid.Column="1"
                                                     Padding="8,2"
-                                                    Background="#FFE8EEF9"
+                                                    Background="#FFF1F5F9"
+                                                    BorderBrush="#FFE2E8F0"
+                                                    BorderThickness="1"
                                                     CornerRadius="10">
-                                                <TextBlock Foreground="#FF2D4A7A"
-                                                           Text="{Binding StatusText}" />
+                                                <TextBlock FontSize="12"
+                                                           Foreground="#FF64748B"
+                                                           Text="{Binding FileName}"
+                                                           TextTrimming="CharacterEllipsis" />
                                             </Border>
-                                        </DockPanel>
+                                        </Grid>
                                         <TextBlock Margin="0,8,0,0"
                                                    Foreground="#FF4A5568"
+                                                   LineHeight="20"
+                                                   MaxHeight="40"
                                                    Text="{Binding Description}"
+                                                   TextTrimming="CharacterEllipsis"
                                                    TextWrapping="Wrap" />
-                                        <TextBlock Margin="0,8,0,0"
-                                                   FontFamily="Consolas"
-                                                   Foreground="#FF718096"
-                                                   Text="{Binding FileName}" />
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -112,36 +124,63 @@
                 </DockPanel>
             </Border>
 
-            <Border Grid.Column="2"
-                    Padding="12"
-                    Background="White"
-                    BorderBrush="#FFD6DCE8"
-                    BorderThickness="1"
-                    CornerRadius="8">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="16" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
+                <Border Grid.Row="0"
+                        Padding="12"
+                        Background="White"
+                        BorderBrush="#FFD6DCE8"
+                        BorderThickness="1"
+                        CornerRadius="8">
                     <StackPanel>
-                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="运行控制" />
-                        <TextBlock Margin="0,8,0,0"
-                                   Foreground="#FF4A5568"
-                                   Text="{Binding SelectedScriptSummary, Mode=OneWay}"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Row="1"
-                                Margin="0,16,0,16"
-                                Orientation="Horizontal">
-                        <Button Width="110" Margin="0,0,8,0" Click="RunButton_OnClick" Content="运行脚本" />
-                        <Button Width="110" Margin="0,0,8,0" Click="StopButton_OnClick" Content="停止脚本" />
-                        <Button Width="130" Click="OpenInEditorButton_OnClick" Content="外部编辑器打开" />
-                    </StackPanel>
+                            <TextBlock FontSize="18" FontWeight="SemiBold" Text="运行控制" />
+                            <Border Grid.Column="1"
+                                    Tag="{Binding RunStatusText}"
+                                    Style="{StaticResource StatusBadgeBorderStyle}">
+                                <TextBlock Tag="{Binding RunStatusText}"
+                                           Style="{StaticResource StatusBadgeTextStyle}"
+                                           Text="{Binding RunStatusText}" />
+                            </Border>
+                        </Grid>
 
-                    <DockPanel Grid.Row="2">
+                        <StackPanel Margin="0,16,0,0"
+                                    Orientation="Horizontal">
+                            <Button Width="116"
+                                    Margin="0,0,8,0"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Click="RunButton_OnClick"
+                                    Content="运行脚本" />
+                            <Button Width="116"
+                                    Margin="0,0,8,0"
+                                    Style="{StaticResource DangerButtonStyle}"
+                                    Click="StopButton_OnClick"
+                                    Content="停止脚本" />
+                            <Button Width="142"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Click="OpenInEditorButton_OnClick"
+                                    Content="外部编辑器打开" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Padding="12"
+                        Background="White"
+                        BorderBrush="#FFD6DCE8"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                    <DockPanel>
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                             <TextBlock FontSize="18" FontWeight="SemiBold" Text="运行日志" />
                             <TextBlock Margin="12,4,0,0"
@@ -155,8 +194,8 @@
                                  FontFamily="Consolas"
                                  Text="{Binding LogOutput}" />
                     </DockPanel>
-                </Grid>
-            </Border>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
