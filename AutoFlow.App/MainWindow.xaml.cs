@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Input;
 using AutoFlow.App.Models;
 using AutoFlow.App.Services;
 
@@ -23,6 +24,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public MainWindow()
     {
         InitializeComponent();
+
+        Style = (Style)FindResource(typeof(Window));
+        SourceInitialized += (_, _) => WindowPlacementService.Apply(this);
 
         DataContext = this;
         ScriptsDirectory = PathService.ResolveScriptsDirectory();
@@ -166,6 +170,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         });
     }
 
+    private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
+    private void CloseButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         _runnerService.Stop();
@@ -182,6 +199,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
+        WindowPlacementService.Save(this);
         base.OnClosing(e);
     }
 

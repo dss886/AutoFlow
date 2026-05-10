@@ -4,6 +4,13 @@ namespace AutoFlow.App.Services;
 
 public static class PathService
 {
+    public static string ResolveAppDataDirectory()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "AutoFlow");
+    }
+
     public static string ResolveLogsDirectory()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
