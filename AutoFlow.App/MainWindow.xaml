@@ -148,18 +148,32 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Style="{StaticResource AppHeaderLine1}" 
-                                           Margin="4,0,0,0"
-                                           Text="运行控制" />
-                                <TextBlock Grid.Column="1"
-                                           VerticalAlignment="Center"
-                                           Margin="12,0,12,0"
-                                           Style="{StaticResource AppTips}"
-                                           Text="{Binding StatusMessage}" />
-                                <Border Grid.Column="2"
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource AppHeaderLine1}" 
+                                               Margin="4,0,0,0"
+                                               Text="运行控制" />
+                                    <TextBlock Margin="12,2,0,0"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding MousePositionText}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock"
+                                                   BasedOn="{StaticResource AppTips}">
+                                                <Setter Property="Visibility"
+                                                        Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMousePositionVisible}"
+                                                                 Value="True">
+                                                        <Setter Property="Visibility"
+                                                                Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                                <Border Grid.Column="1"
                                         Margin="0,0,4,0"
                                         Tag="{Binding RunStatusText}"
                                         Style="{StaticResource StatusBadgeBorderStyle}">
@@ -171,21 +185,51 @@
 
                             <StackPanel Margin="0,16,0,0"
                                         Orientation="Horizontal">
-                                <Button Width="116"
+                                <Button Width="160"
                                         Margin="0,0,8,0"
-                                        Style="{StaticResource PrimaryButtonStyle}"
                                         Click="RunButton_OnClick"
-                                        Content="运行脚本" />
-                                <Button Width="116"
-                                        Margin="0,0,8,0"
-                                        Style="{StaticResource DangerButtonStyle}"
-                                        Click="StopButton_OnClick"
-                                        Content="停止脚本" />
+                                        Content="{Binding RunControlButtonText}">
+                                    <Button.Style>
+                                        <Style TargetType="Button"
+                                               BasedOn="{StaticResource PrimaryButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsScriptRunning}"
+                                                             Value="True">
+                                                    <Setter Property="Background"
+                                                            Value="#FFDC2626" />
+                                                    <Setter Property="BorderBrush"
+                                                            Value="#FFDC2626" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                                 <Button Width="142"
                                         Margin="0,0,8,0"
                                         Style="{StaticResource SecondaryButtonStyle}"
                                         Click="OpenInEditorButton_OnClick"
                                         Content="外部编辑器打开" />
+                                <Button Width="160"
+                                        Margin="0,0,8,0"
+                                        Click="ToggleMousePositionButton_OnClick"
+                                        Content="{Binding MousePositionToggleButtonText}">
+                                    <Button.Style>
+                                        <Style TargetType="Button"
+                                               BasedOn="{StaticResource SecondaryButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMousePositionVisible}"
+                                                             Value="True">
+                                                    <Setter Property="Foreground"
+                                                            Value="#FF0F172A" />
+                                                    <Setter Property="Background"
+                                                            Value="#FFDBEAFE" />
+                                                    <Setter Property="BorderBrush"
+                                                            Value="#FF93C5FD" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                             </StackPanel>
                         </StackPanel>
                     </Border>

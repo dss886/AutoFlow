@@ -5,6 +5,8 @@ namespace AutoFlow.App.Services;
 
 public sealed class AutomationInputService
 {
+    private const int DefaultClickHoldMilliseconds = 30;
+
     public void MoveMouse(int x, int y)
     {
         SetCursorPos(x, y);
@@ -22,8 +24,13 @@ public sealed class AutomationInputService
 
     public void Click(string button)
     {
-        MouseDown(button);
-        MouseUp(button);
+        var normalizedButton = NormalizeMouseButton(button);
+        SendMouseInput(normalizedButton, isDown: true);
+
+        // A tiny hold makes the synthetic click more reliable for some targets.
+        System.Threading.Thread.Sleep(DefaultClickHoldMilliseconds);
+
+        SendMouseInput(normalizedButton, isDown: false);
     }
 
     public void PressKey(string keyExpression)
@@ -67,13 +74,7 @@ public sealed class AutomationInputService
 
     private static void SendMouseInput(string button, bool isDown)
     {
-        var flags = button.Trim().ToLowerInvariant() switch
-        {
-            "left" => isDown ? MouseEventFlags.LeftDown : MouseEventFlags.LeftUp,
-            "right" => isDown ? MouseEventFlags.RightDown : MouseEventFlags.RightUp,
-            "middle" => isDown ? MouseEventFlags.MiddleDown : MouseEventFlags.MiddleUp,
-            _ => throw new InvalidOperationException($"不支持的鼠标按键: {button}"),
-        };
+        var flags = ToMouseEventFlag(button, isDown);
 
         var input = new INPUT
         {
@@ -88,6 +89,27 @@ public sealed class AutomationInputService
         };
 
         SendInputs(new[] { input });
+    }
+
+    private static string NormalizeMouseButton(string button)
+    {
+        var normalized = button.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "left" or "right" or "middle" => normalized,
+            _ => throw new InvalidOperationException($"不支持的鼠标按键: {button}"),
+        };
+    }
+
+    private static MouseEventFlags ToMouseEventFlag(string button, bool isDown)
+    {
+        return NormalizeMouseButton(button) switch
+        {
+            "left" => isDown ? MouseEventFlags.LeftDown : MouseEventFlags.LeftUp,
+            "right" => isDown ? MouseEventFlags.RightDown : MouseEventFlags.RightUp,
+            "middle" => isDown ? MouseEventFlags.MiddleDown : MouseEventFlags.MiddleUp,
+            _ => throw new InvalidOperationException($"不支持的鼠标按键: {button}"),
+        };
     }
 
     private static void SendKeyboardInput(ushort virtualKey, bool isKeyUp)
