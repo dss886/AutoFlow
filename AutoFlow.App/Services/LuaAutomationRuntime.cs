@@ -1,6 +1,6 @@
 using MoonSharp.Interpreter;
 
-namespace AutomationHost.App.Services;
+namespace AutoFlow.App.Services;
 
 public sealed class LuaAutomationRuntime
 {

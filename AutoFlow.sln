@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomationHost.App", "AutomationHost.App\AutomationHost.App.csproj", "{400F94D4-30C2-4745-BDAE-8D09947A1D34}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.App", "AutoFlow.App\AutoFlow.App.csproj", "{400F94D4-30C2-4745-BDAE-8D09947A1D34}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

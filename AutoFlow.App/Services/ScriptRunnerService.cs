@@ -1,6 +1,6 @@
-using AutomationHost.App.Models;
+using AutoFlow.App.Models;
 
-namespace AutomationHost.App.Services;
+namespace AutoFlow.App.Services;
 
 public sealed class ScriptRunnerService
 {

@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
-using AutomationHost.App.Models;
-using AutomationHost.App.Services;
+using AutoFlow.App.Models;
+using AutoFlow.App.Services;
 
-namespace AutomationHost.App;
+namespace AutoFlow.App;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {

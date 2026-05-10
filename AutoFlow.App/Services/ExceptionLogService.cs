@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text;
 
-namespace AutomationHost.App.Services;
+namespace AutoFlow.App.Services;
 
 public static class ExceptionLogService
 {

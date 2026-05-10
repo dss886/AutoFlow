@@ -2,10 +2,10 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
-using AutomationHost.App.Services;
+using AutoFlow.App.Services;
 using Forms = System.Windows.Forms;
 
-namespace AutomationHost.App;
+namespace AutoFlow.App;
 
 public partial class App : System.Windows.Application
 {
@@ -83,7 +83,7 @@ public partial class App : System.Windows.Application
         var logFilePath = ExceptionLogService.LogException(source, exception);
         System.Windows.MessageBox.Show(
             $"程序发生未处理异常，已写入日志文件：\n{logFilePath}\n\n{exception.Message}",
-            "AutomationHost 启动异常",
+            "AutoFlow 启动异常",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
     }
@@ -93,7 +93,7 @@ public partial class App : System.Windows.Application
         var logFilePath = ExceptionLogService.LogException(source, exception);
         System.Windows.MessageBox.Show(
             $"后台任务发生异常，已写入日志文件：\n{logFilePath}\n\n{exception.Message}",
-            "AutomationHost 后台异常",
+            "AutoFlow 后台异常",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }

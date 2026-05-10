@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace AutomationHost.App.Models;
+namespace AutoFlow.App.Models;
 
 public sealed class ScriptDefinition : INotifyPropertyChanged
 {

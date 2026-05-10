@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 
-namespace AutomationHost.App.Services;
+namespace AutoFlow.App.Services;
 
 public sealed class AutomationInputService
 {

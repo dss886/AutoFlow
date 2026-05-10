@@ -1,4 +1,4 @@
-# AutomationHost
+# AutoFlow
 
 基于 `C# + WPF + Lua` 的 Windows 自动化脚本宿主工具。
 
@@ -13,8 +13,8 @@
 ## 运行
 
 ```powershell
-dotnet build .\AutomationHost.sln
-dotnet run --project .\AutomationHost.App\AutomationHost.App.csproj
+dotnet build .\AutoFlow.sln
+dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 ```
 
 ## 异常日志

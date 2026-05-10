@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace AutomationHost.App.Services;
+namespace AutoFlow.App.Services;
 
 public static class PathService
 {
