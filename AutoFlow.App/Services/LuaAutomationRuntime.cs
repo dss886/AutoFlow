@@ -2,6 +2,14 @@ using MoonSharp.Interpreter;
 
 namespace AutoFlow.App.Services;
 
+public sealed class ScriptExecutionCanceledException : Exception
+{
+    public ScriptExecutionCanceledException()
+        : base("脚本执行已停止。")
+    {
+    }
+}
+
 public sealed class LuaAutomationRuntime
 {
     private readonly AutomationInputService _inputService;
@@ -21,6 +29,11 @@ public sealed class LuaAutomationRuntime
         }, cancellationToken);
     }
 
+    public void ReleasePressedInputs()
+    {
+        _inputService.ReleasePressedInputs();
+    }
+
     private void RegisterHostApi(Script script, Action<string> log, CancellationToken cancellationToken)
     {
         script.Globals["host"] = BuildHostTable(script, log, cancellationToken);
@@ -33,7 +46,7 @@ public sealed class LuaAutomationRuntime
         var table = new Table(script);
         table["log"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             var message = args.Count > 0 ? args[0].CastToString() ?? string.Empty : string.Empty;
             log(message);
             return DynValue.Nil;
@@ -41,13 +54,13 @@ public sealed class LuaAutomationRuntime
 
         table["sleep"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             var milliseconds = RequireInt(args, 0, "host.sleep");
 
             var remaining = milliseconds;
             while (remaining > 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ThrowIfCancellationRequested(cancellationToken);
                 var step = Math.Min(remaining, 100);
                 Thread.Sleep(step);
                 remaining -= step;
@@ -69,14 +82,14 @@ public sealed class LuaAutomationRuntime
         var table = new Table(script);
         table["move"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             _inputService.MoveMouse(RequireInt(args, 0, "mouse.move"), RequireInt(args, 1, "mouse.move"));
             return DynValue.Nil;
         });
 
         table["click"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             var button = args.Count > 0 ? args[0].CastToString() ?? "left" : "left";
             _inputService.Click(button);
             return DynValue.Nil;
@@ -84,14 +97,14 @@ public sealed class LuaAutomationRuntime
 
         table["down"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             _inputService.MouseDown(RequireString(args, 0, "mouse.down"));
             return DynValue.Nil;
         });
 
         table["up"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             _inputService.MouseUp(RequireString(args, 0, "mouse.up"));
             return DynValue.Nil;
         });
@@ -104,26 +117,34 @@ public sealed class LuaAutomationRuntime
         var table = new Table(script);
         table["press"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             _inputService.PressKey(RequireString(args, 0, "keyboard.press"));
             return DynValue.Nil;
         });
 
         table["down"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             _inputService.KeyDown(RequireString(args, 0, "keyboard.down"));
             return DynValue.Nil;
         });
 
         table["up"] = DynValue.NewCallback((_, args) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfCancellationRequested(cancellationToken);
             _inputService.KeyUp(RequireString(args, 0, "keyboard.up"));
             return DynValue.Nil;
         });
 
         return table;
+    }
+
+    private static void ThrowIfCancellationRequested(CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            throw new ScriptExecutionCanceledException();
+        }
     }
 
     private static int RequireInt(CallbackArguments args, int index, string functionName)

@@ -37,6 +37,10 @@ public sealed class ScriptRunnerService
             await _runtime.ExecuteAsync(script.FilePath, LogGeneratedMessage, _currentRunCts.Token);
             LogGenerated?.Invoke($"脚本执行完成: {script.Name}");
         }
+        catch (ScriptExecutionCanceledException)
+        {
+            LogGenerated?.Invoke($"脚本已停止: {script.Name}");
+        }
         catch (OperationCanceledException)
         {
             LogGenerated?.Invoke($"脚本已停止: {script.Name}");
@@ -49,6 +53,7 @@ public sealed class ScriptRunnerService
         {
             var completedScript = RunningScript;
             RunningScript = null;
+            _runtime.ReleasePressedInputs();
             _currentRunCts.Dispose();
             _currentRunCts = null;
             ScriptStateChanged?.Invoke(completedScript, false);

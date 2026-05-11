@@ -6,6 +6,9 @@ namespace AutoFlow.App.Services;
 public sealed class AutomationInputService
 {
     private const int DefaultClickHoldMilliseconds = 30;
+    private readonly object _syncRoot = new();
+    private readonly HashSet<string> _pressedMouseButtons = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<ushort> _pressedKeys = new();
 
     public void MoveMouse(int x, int y)
     {
@@ -14,12 +17,24 @@ public sealed class AutomationInputService
 
     public void MouseDown(string button)
     {
-        SendMouseInput(button, isDown: true);
+        var normalizedButton = NormalizeMouseButton(button);
+        SendMouseInput(normalizedButton, isDown: true);
+
+        lock (_syncRoot)
+        {
+            _pressedMouseButtons.Add(normalizedButton);
+        }
     }
 
     public void MouseUp(string button)
     {
-        SendMouseInput(button, isDown: false);
+        var normalizedButton = NormalizeMouseButton(button);
+        SendMouseInput(normalizedButton, isDown: false);
+
+        lock (_syncRoot)
+        {
+            _pressedMouseButtons.Remove(normalizedButton);
+        }
     }
 
     public void Click(string button)
@@ -56,12 +71,46 @@ public sealed class AutomationInputService
     {
         var key = ToVirtualKey(keyExpression);
         SendKeyboardInput((ushort)key, isKeyUp: false);
+
+        lock (_syncRoot)
+        {
+            _pressedKeys.Add((ushort)key);
+        }
     }
 
     public void KeyUp(string keyExpression)
     {
         var key = ToVirtualKey(keyExpression);
         SendKeyboardInput((ushort)key, isKeyUp: true);
+
+        lock (_syncRoot)
+        {
+            _pressedKeys.Remove((ushort)key);
+        }
+    }
+
+    public void ReleasePressedInputs()
+    {
+        List<string> pressedMouseButtons;
+        List<ushort> pressedKeys;
+
+        lock (_syncRoot)
+        {
+            pressedMouseButtons = _pressedMouseButtons.ToList();
+            pressedKeys = _pressedKeys.ToList();
+            _pressedMouseButtons.Clear();
+            _pressedKeys.Clear();
+        }
+
+        foreach (var button in pressedMouseButtons)
+        {
+            TryRelease(() => SendMouseInput(button, isDown: false));
+        }
+
+        foreach (var key in pressedKeys)
+        {
+            TryRelease(() => SendKeyboardInput(key, isKeyUp: true));
+        }
     }
 
     private static IReadOnlyList<string> NormalizeKeys(string keyExpression)
@@ -169,6 +218,18 @@ public sealed class AutomationInputService
         if (sent != inputs.Length)
         {
             throw new InvalidOperationException("发送输入失败。");
+        }
+    }
+
+    private static void TryRelease(Action releaseAction)
+    {
+        try
+        {
+            releaseAction();
+        }
+        catch
+        {
+            // 安全收尾阶段尽量释放剩余输入状态，不让单次失败中断后续释放。
         }
     }
 

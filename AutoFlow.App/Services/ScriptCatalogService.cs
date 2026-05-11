@@ -9,35 +9,62 @@ public sealed class ScriptCatalogService
     {
         PathService.EnsureDirectory(scriptsDirectory);
 
-        return Directory
-            .EnumerateFiles(scriptsDirectory, "*.lua", SearchOption.TopDirectoryOnly)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .Select(ReadScriptMetadata)
-            .ToList();
+        var scripts = new List<ScriptDefinition>();
+        foreach (var filePath in Directory
+                     .EnumerateFiles(scriptsDirectory, "*.lua", SearchOption.TopDirectoryOnly)
+                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var script = TryReadScriptMetadata(filePath);
+            if (script is not null)
+            {
+                scripts.Add(script);
+            }
+        }
+
+        return scripts;
     }
 
-    private static ScriptDefinition ReadScriptMetadata(string filePath)
+    private static ScriptDefinition? TryReadScriptMetadata(string filePath)
     {
         var name = Path.GetFileNameWithoutExtension(filePath);
         var description = "未提供描述";
 
-        foreach (var line in File.ReadLines(filePath).Take(20))
+        try
         {
-            var trimmed = line.Trim();
-            if (!trimmed.StartsWith("--", StringComparison.Ordinal))
+            foreach (var line in File.ReadLines(filePath).Take(20))
             {
-                continue;
-            }
+                var trimmed = line.Trim();
+                if (!trimmed.StartsWith("--", StringComparison.Ordinal))
+                {
+                    continue;
+                }
 
-            trimmed = trimmed[2..].Trim();
-            if (trimmed.StartsWith("@name:", StringComparison.OrdinalIgnoreCase))
-            {
-                name = trimmed[6..].Trim();
+                trimmed = trimmed[2..].Trim();
+                if (trimmed.StartsWith("@name:", StringComparison.OrdinalIgnoreCase))
+                {
+                    name = trimmed[6..].Trim();
+                }
+                else if (trimmed.StartsWith("@description:", StringComparison.OrdinalIgnoreCase))
+                {
+                    description = trimmed[13..].Trim();
+                }
             }
-            else if (trimmed.StartsWith("@description:", StringComparison.OrdinalIgnoreCase))
-            {
-                description = trimmed[13..].Trim();
-            }
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
+        catch (IOException) when (!File.Exists(filePath))
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            // 文件正在被编辑器替换或短暂占用时，保留基础信息以避免刷新直接失败。
         }
 
         return new ScriptDefinition

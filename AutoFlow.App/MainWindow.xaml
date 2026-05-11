@@ -241,12 +241,14 @@
                                 <TextBlock Style="{StaticResource AppHeaderLine1}" Text="运行日志" />
                             </DockPanel>
 
-                            <TextBox IsReadOnly="True"
+                            <TextBox x:Name="LogOutputTextBox"
+                                     IsReadOnly="True"
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Auto"
                                      FontFamily="Consolas"
                                      Background="{DynamicResource AppBackgroundDark}"
                                      Foreground="White"
+                                     TextChanged="LogOutputTextBox_OnTextChanged"
                                      Text="{Binding LogOutput}" />
                         </DockPanel>
                     </Border>

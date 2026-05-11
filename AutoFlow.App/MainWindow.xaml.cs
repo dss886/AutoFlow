@@ -15,6 +15,7 @@ namespace AutoFlow.App;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
+    private const int MaxLogLineCount = 3000;
     private const int WhMouseLl = 14;
     private const int WmXButtonDown = 0x020B;
     private const int WmXButtonUp = 0x020C;
@@ -24,7 +25,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly ScriptRunnerService _runnerService;
     private readonly FileSystemWatcher _fileSystemWatcher;
     private readonly DispatcherTimer _mousePositionTimer;
+    private readonly DispatcherTimer _scriptRefreshTimer;
     private readonly LowLevelMouseProc _mouseHookProc;
+    private readonly Queue<string> _logEntries = new();
     private ScriptDefinition? _selectedScript;
     private string _logOutput = string.Empty;
     private string _runStatusText = "空闲";
@@ -56,6 +59,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Interval = TimeSpan.FromMilliseconds(100),
         };
         _mousePositionTimer.Tick += MousePositionTimer_OnTick;
+        _scriptRefreshTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(200),
+        };
+        _scriptRefreshTimer.Tick += ScriptRefreshTimer_OnTick;
 
         _fileSystemWatcher = new FileSystemWatcher(ScriptsDirectory, "*.lua")
         {
@@ -226,6 +234,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
+        if (!EnsureSelectedScriptExists())
+        {
+            return;
+        }
+
         try
         {
             await _runnerService.StartAsync(SelectedScript);
@@ -272,6 +285,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
+        if (!EnsureSelectedScriptExists())
+        {
+            return;
+        }
+
         Process.Start(new ProcessStartInfo
         {
             FileName = SelectedScript.FilePath,
@@ -306,6 +324,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     protected override void OnClosed(EventArgs e)
     {
         _mousePositionTimer.Stop();
+        _scriptRefreshTimer.Stop();
         RemoveMouseHook();
         _runnerService.Stop();
         _fileSystemWatcher.Dispose();
@@ -431,12 +450,37 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StatusMessage = Scripts.Count == 0 ? "脚本目录为空" : $"已加载 {Scripts.Count} 个脚本";
     }
 
+    private bool EnsureSelectedScriptExists()
+    {
+        var selectedScript = SelectedScript;
+        if (selectedScript is null)
+        {
+            return false;
+        }
+
+        if (File.Exists(selectedScript.FilePath))
+        {
+            return true;
+        }
+
+        LoadScripts();
+        AppendLog($"脚本文件不存在，已跳过操作: {selectedScript.FileName}");
+        StatusMessage = "脚本文件已不存在";
+        System.Windows.MessageBox.Show(this, "所选脚本文件已不存在，列表已自动刷新。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        return false;
+    }
+
     private void AppendLog(string message)
     {
         var timestamped = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        LogOutput = string.IsNullOrWhiteSpace(LogOutput)
-            ? timestamped
-            : $"{LogOutput}{Environment.NewLine}{timestamped}";
+        _logEntries.Enqueue(timestamped);
+
+        while (_logEntries.Count > MaxLogLineCount)
+        {
+            _logEntries.Dequeue();
+        }
+
+        LogOutput = string.Join(Environment.NewLine, _logEntries);
     }
 
     private void RunnerService_OnLogGenerated(string message)
@@ -466,13 +510,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         });
     }
 
+    private void ScriptRefreshTimer_OnTick(object? sender, EventArgs e)
+    {
+        _scriptRefreshTimer.Stop();
+        LoadScripts();
+        AppendLog("检测到脚本目录变化，已自动刷新。");
+    }
+
     private void FileSystemWatcher_OnChanged(object sender, FileSystemEventArgs e)
     {
         Dispatcher.InvokeAsync(() =>
         {
-            LoadScripts();
-            AppendLog("检测到脚本目录变化，已自动刷新。");
+            _scriptRefreshTimer.Stop();
+            _scriptRefreshTimer.Start();
         });
+    }
+
+    private void LogOutputTextBox_OnTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        LogOutputTextBox.ScrollToEnd();
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
