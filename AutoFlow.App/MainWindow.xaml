@@ -241,15 +241,27 @@
                                 <TextBlock Style="{StaticResource AppHeaderLine1}" Text="运行日志" />
                             </DockPanel>
 
-                            <TextBox x:Name="LogOutputTextBox"
-                                     IsReadOnly="True"
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Auto"
-                                     FontFamily="Consolas"
-                                     Background="{DynamicResource AppBackgroundDark}"
-                                     Foreground="White"
-                                     TextChanged="LogOutputTextBox_OnTextChanged"
-                                     Text="{Binding LogOutput}" />
+                            <Border Background="{DynamicResource AppBackgroundDark}"
+                                    CornerRadius="6">
+                                <TextBox x:Name="LogOutputTextBox"
+                                         IsReadOnly="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         FontFamily="Consolas"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Padding="6"
+                                         FontSize="14"
+                                         BorderBrush="Transparent"
+                                         Foreground="#DEFFFFFF"
+                                         TextChanged="LogOutputTextBox_OnTextChanged"
+                                         Text="{Binding LogOutput}">
+                                    <TextBox.Resources>
+                                        <Style TargetType="ScrollBar"
+                                               BasedOn="{StaticResource LogOutputScrollBarStyle}" />
+                                    </TextBox.Resources>
+                                </TextBox>
+                            </Border>
                         </DockPanel>
                     </Border>
                 </Grid>
