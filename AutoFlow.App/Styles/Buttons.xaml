@@ -34,7 +34,7 @@
         <Setter Property="Padding" Value="0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Foreground" Value="{StaticResource AppForegroundPrimary}" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Opacity" Value="0.54" />
         <Setter Property="Cursor" Value="Hand" />
@@ -60,9 +60,9 @@
     </Style>
 
     <Style x:Key="ModernButtonBaseStyle" TargetType="Button">
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="Background" Value="#FF2563EB" />
-        <Setter Property="BorderBrush" Value="#FF2563EB" />
+        <Setter Property="Foreground" Value="{StaticResource AppForegroundPrimary}" />
+        <Setter Property="Background" Value="{StaticResource AppButtonPrimaryBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AppButtonPrimaryBorder}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="18,10" />
         <Setter Property="FontSize" Value="13" />
@@ -89,8 +89,8 @@
                             <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="#FF94A3B8" />
-                            <Setter TargetName="ButtonBorder" Property="Background" Value="#FFE2E8F0" />
+                            <Setter Property="Foreground" Value="{StaticResource AppButtonDisabledForeground}" />
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AppButtonDisabledBackground}" />
                             <Setter TargetName="ButtonBorder" Property="Opacity" Value="1" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -102,23 +102,23 @@
     <Style x:Key="PrimaryButtonStyle"
            BasedOn="{StaticResource ModernButtonBaseStyle}"
            TargetType="Button">
-        <Setter Property="Background" Value="#FF2563EB" />
-        <Setter Property="BorderBrush" Value="#FF2563EB" />
+        <Setter Property="Background" Value="{StaticResource AppButtonPrimaryBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AppButtonPrimaryBorder}" />
     </Style>
 
     <Style x:Key="SecondaryButtonStyle"
            BasedOn="{StaticResource ModernButtonBaseStyle}"
            TargetType="Button">
-        <Setter Property="Foreground" Value="#FF1E3A8A" />
-        <Setter Property="Background" Value="#FFEFF6FF" />
-        <Setter Property="BorderBrush" Value="#FFD0E2FF" />
+        <Setter Property="Foreground" Value="{StaticResource AppButtonSecondaryForeground}" />
+        <Setter Property="Background" Value="{StaticResource AppButtonSecondaryBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AppButtonSecondaryBorder}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <Style x:Key="DangerButtonStyle"
            BasedOn="{StaticResource ModernButtonBaseStyle}"
            TargetType="Button">
-        <Setter Property="Background" Value="#FFDC2626" />
-        <Setter Property="BorderBrush" Value="#FFDC2626" />
+        <Setter Property="Background" Value="{StaticResource AppDangerBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AppDangerBrush}" />
     </Style>
 </ResourceDictionary>

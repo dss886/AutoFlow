@@ -1,6 +1,23 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="AppBackgroundDark" Color="#33333D" />
-    <SolidColorBrush x:Key="AppBackground" Color="#42424C" />
-    <SolidColorBrush x:Key="AppColorPrimary" Color="#2196F3" />
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:styling="clr-namespace:AutoFlow.App.Styling">
+    <x:Static x:Key="AppBackgroundDark" Member="styling:AppColorTokens.BackgroundDarkBrush" />
+    <x:Static x:Key="AppBackground" Member="styling:AppColorTokens.BackgroundBrush" />
+    <x:Static x:Key="AppColorPrimary" Member="styling:AppColorTokens.PrimaryBrush" />
+    <x:Static x:Key="AppForegroundPrimary" Member="styling:AppColorTokens.ForegroundPrimaryBrush" />
+    <x:Static x:Key="AppForegroundMuted" Member="styling:AppColorTokens.ForegroundMutedBrush" />
+    <x:Static x:Key="AppButtonPrimaryBackground" Member="styling:AppColorTokens.PrimaryButtonBrush" />
+    <x:Static x:Key="AppButtonPrimaryBorder" Member="styling:AppColorTokens.PrimaryButtonBrush" />
+    <x:Static x:Key="AppButtonDisabledForeground" Member="styling:AppColorTokens.ButtonDisabledForegroundBrush" />
+    <x:Static x:Key="AppButtonDisabledBackground" Member="styling:AppColorTokens.ButtonDisabledBackgroundBrush" />
+    <x:Static x:Key="AppButtonSecondaryForeground" Member="styling:AppColorTokens.SecondaryButtonForegroundBrush" />
+    <x:Static x:Key="AppButtonSecondaryBackground" Member="styling:AppColorTokens.SecondaryButtonBackgroundBrush" />
+    <x:Static x:Key="AppButtonSecondaryBorder" Member="styling:AppColorTokens.SecondaryButtonBorderBrush" />
+    <x:Static x:Key="AppDangerBrush" Member="styling:AppColorTokens.DangerBrush" />
+    <x:Static x:Key="AppAccentActiveForeground" Member="styling:AppColorTokens.AccentActiveForegroundBrush" />
+    <x:Static x:Key="AppAccentActiveBackground" Member="styling:AppColorTokens.AccentActiveBackgroundBrush" />
+    <x:Static x:Key="AppAccentActiveBorder" Member="styling:AppColorTokens.AccentActiveBorderBrush" />
+    <x:Static x:Key="AppMenuBorderBrush" Member="styling:AppColorTokens.MenuBorderBrush" />
+    <x:Static x:Key="AppMenuHoverBrush" Member="styling:AppColorTokens.MenuHoverBrush" />
+    <x:Static x:Key="AppMenuDisabledForegroundBrush" Member="styling:AppColorTokens.MenuDisabledForegroundBrush" />
 </ResourceDictionary>

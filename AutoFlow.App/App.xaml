@@ -9,6 +9,7 @@
                 <ResourceDictionary Source="Styles/Window.xaml" />
                 <ResourceDictionary Source="Styles/Typography.xaml" />
                 <ResourceDictionary Source="Styles/Buttons.xaml" />
+                <ResourceDictionary Source="Styles/Menus.xaml" />
                 <ResourceDictionary Source="Styles/Lists.xaml" />
                 <ResourceDictionary Source="Styles/ScrollBars.xaml" />
                 <ResourceDictionary Source="Templates/ScriptTemplates.xaml" />

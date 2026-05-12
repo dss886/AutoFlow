@@ -40,19 +40,14 @@
                                 <DataTrigger Binding="{Binding IsScriptRunning}"
                                              Value="True">
                                     <Setter Property="Background"
-                                            Value="#FFDC2626" />
+                                            Value="{StaticResource AppDangerBrush}" />
                                     <Setter Property="BorderBrush"
-                                            Value="#FFDC2626" />
+                                            Value="{StaticResource AppDangerBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Width="142"
-                        Margin="0,0,8,0"
-                        Command="{Binding OpenInEditorCommand}"
-                        Content="外部编辑器打开"
-                        Style="{StaticResource SecondaryButtonStyle}" />
                 <Button Width="160"
                         Margin="0,0,8,0"
                         Command="{Binding ToggleMousePositionCommand}"
@@ -64,11 +59,11 @@
                                 <DataTrigger Binding="{Binding IsMousePositionVisible}"
                                              Value="True">
                                     <Setter Property="Foreground"
-                                            Value="#FF0F172A" />
+                                            Value="{StaticResource AppAccentActiveForeground}" />
                                     <Setter Property="Background"
-                                            Value="#FFDBEAFE" />
+                                            Value="{StaticResource AppAccentActiveBackground}" />
                                     <Setter Property="BorderBrush"
-                                            Value="#FF93C5FD" />
+                                            Value="{StaticResource AppAccentActiveBorder}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

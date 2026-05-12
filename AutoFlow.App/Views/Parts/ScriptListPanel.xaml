@@ -25,6 +25,7 @@
             <ListBox BorderThickness="0"
                      Padding="0"
                      Background="Transparent"
+                     PreviewMouseRightButtonDown="ScriptList_OnPreviewMouseRightButtonDown"
                      ScrollViewer.CanContentScroll="False"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ItemContainerStyle="{StaticResource AppListBoxContainerStyle}"

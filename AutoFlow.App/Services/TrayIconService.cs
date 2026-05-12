@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
+using AutoFlow.App.Styling;
 using DrawingFont = System.Drawing.Font;
 using DrawingFontStyle = System.Drawing.FontStyle;
 using DrawingGraphicsUnit = System.Drawing.GraphicsUnit;
@@ -13,20 +14,13 @@ namespace AutoFlow.App.Services;
 
 internal sealed class TrayIconService : IDisposable
 {
-    private const int ContextMenuOuterPadding = 16;
-    private const int MenuItemWidth = 240;
-    private const int MenuItemHeight = 72;
-
-    internal static readonly Color MenuBackgroundColor = Color.FromArgb(51, 51, 61);
-    internal static readonly Color MenuTextColor = Color.White;
-
     private readonly Forms.NotifyIcon _notifyIcon;
     private readonly Icon _notifyIconImage;
     private readonly DrawingFont _notifyMenuFont;
 
     public TrayIconService(ICommand openMainWindowCommand, ICommand exitApplicationCommand)
     {
-        _notifyMenuFont = new DrawingFont("Microsoft YaHei", 10F, DrawingFontStyle.Regular, DrawingGraphicsUnit.Point);
+        _notifyMenuFont = new DrawingFont(AppMenuTokens.FontFamilyName, AppMenuTokens.TrayFontSize, DrawingFontStyle.Regular, DrawingGraphicsUnit.Point);
 
         var openMenuItem = CreateNotifyMenuItem("打开主窗口");
         openMenuItem.Click += (_, _) => ExecuteCommand(openMainWindowCommand);
@@ -39,9 +33,9 @@ internal sealed class TrayIconService : IDisposable
             ShowImageMargin = false,
             ShowCheckMargin = false,
             Font = _notifyMenuFont,
-            MinimumSize = new DrawingSize(MenuItemWidth + (ContextMenuOuterPadding * 2), MenuItemHeight * 2 + (ContextMenuOuterPadding * 2)),
-            BackColor = MenuBackgroundColor,
-            ForeColor = MenuTextColor,
+            MinimumSize = new DrawingSize(AppMenuTokens.TrayContextMenuMinWidth, AppMenuTokens.GetTrayContextMenuMinHeight(2)),
+            BackColor = AppColorTokens.BackgroundDarkDrawingColor,
+            ForeColor = AppColorTokens.ForegroundPrimaryDrawingColor,
         };
 
         contextMenu.Items.Add(openMenuItem);
@@ -79,10 +73,10 @@ internal sealed class TrayIconService : IDisposable
         return new Forms.ToolStripMenuItem(text)
         {
             AutoSize = false,
-            Size = new DrawingSize(MenuItemWidth, MenuItemHeight),
+            Size = new DrawingSize(AppMenuTokens.TrayMenuItemWidth, AppMenuTokens.TrayMenuItemHeight),
             Margin = new Forms.Padding(0),
-            Padding = new Forms.Padding(16, 0, 16, 0),
-            ForeColor = MenuTextColor,
+            Padding = new Forms.Padding(AppMenuTokens.TrayMenuItemHorizontalPadding, 0, AppMenuTokens.TrayMenuItemHorizontalPadding, 0),
+            ForeColor = AppColorTokens.ForegroundPrimaryDrawingColor,
         };
     }
 
@@ -91,9 +85,9 @@ internal sealed class TrayIconService : IDisposable
         for (var index = 0; index < contextMenu.Items.Count; index++)
         {
             var item = contextMenu.Items[index];
-            var top = index == 0 ? ContextMenuOuterPadding : 0;
-            var bottom = index == contextMenu.Items.Count - 1 ? ContextMenuOuterPadding : 0;
-            item.Margin = new Forms.Padding(ContextMenuOuterPadding, top, ContextMenuOuterPadding, bottom);
+            var top = index == 0 ? AppMenuTokens.TrayContextMenuOuterPadding : 0;
+            var bottom = index == contextMenu.Items.Count - 1 ? AppMenuTokens.TrayContextMenuOuterPadding : 0;
+            item.Margin = new Forms.Padding(AppMenuTokens.TrayContextMenuOuterPadding, top, AppMenuTokens.TrayContextMenuOuterPadding, bottom);
         }
     }
 
@@ -138,13 +132,11 @@ internal sealed class TrayIconService : IDisposable
 
 internal sealed class RoundedContextMenuStrip : Forms.ContextMenuStrip
 {
-    private const int CornerRadius = 12;
-
     public RoundedContextMenuStrip()
     {
         Renderer = new RoundedMenuRenderer();
-        BackColor = TrayIconService.MenuBackgroundColor;
-        ForeColor = TrayIconService.MenuTextColor;
+        BackColor = AppColorTokens.BackgroundDarkDrawingColor;
+        ForeColor = AppColorTokens.ForegroundPrimaryDrawingColor;
     }
 
     protected override void OnOpening(System.ComponentModel.CancelEventArgs e)
@@ -166,7 +158,7 @@ internal sealed class RoundedContextMenuStrip : Forms.ContextMenuStrip
             return;
         }
 
-        using var path = CreateRoundedPath(new Rectangle(0, 0, Width, Height), CornerRadius);
+        using var path = CreateRoundedPath(new Rectangle(0, 0, Width, Height), AppMenuTokens.ContextMenuCornerRadiusValue);
         var previousRegion = Region;
         Region = new Region(path);
         previousRegion?.Dispose();
@@ -192,9 +184,6 @@ internal sealed class RoundedContextMenuStrip : Forms.ContextMenuStrip
 
 internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
 {
-    private static readonly Color MenuBorderColor = Color.FromArgb(88, 88, 104);
-    private static readonly Color MenuHoverColor = Color.FromArgb(72, 72, 86);
-
     public RoundedMenuRenderer() : base(new RoundedMenuColorTable())
     {
     }
@@ -207,9 +196,9 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
         bounds.Width -= 1;
         bounds.Height -= 1;
 
-        using var backgroundPath = CreateRoundedPath(bounds, 12);
+        using var backgroundPath = CreateRoundedPath(bounds, AppMenuTokens.ContextMenuCornerRadiusValue);
         using var backgroundBrush = new SolidBrush(e.ToolStrip.BackColor);
-        using var borderPen = new Pen(MenuBorderColor);
+        using var borderPen = new Pen(AppColorTokens.MenuBorderDrawingColor);
 
         e.Graphics.FillPath(backgroundBrush, backgroundPath);
         e.Graphics.DrawPath(borderPen, backgroundPath);
@@ -227,8 +216,8 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
         var bounds = new Rectangle(DrawingPoint.Empty, e.Item.Size);
         bounds.Inflate(-2, 0);
 
-        using var path = CreateRoundedPath(bounds, 8);
-        using var brush = new SolidBrush(MenuHoverColor);
+        using var path = CreateRoundedPath(bounds, AppMenuTokens.MenuItemCornerRadiusValue);
+        using var brush = new SolidBrush(AppColorTokens.MenuHoverDrawingColor);
         e.Graphics.FillPath(brush, path);
     }
 
@@ -240,7 +229,7 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
             Math.Max(0, e.Item.Width - e.Item.Padding.Horizontal),
             e.Item.Height);
 
-        var textColor = e.TextColor.IsEmpty ? TrayIconService.MenuTextColor : e.TextColor;
+        var textColor = e.TextColor.IsEmpty ? AppColorTokens.ForegroundPrimaryDrawingColor : e.TextColor;
         Forms.TextRenderer.DrawText(
             e.Graphics,
             e.Text,
@@ -279,7 +268,7 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
 
 internal sealed class RoundedMenuColorTable : Forms.ProfessionalColorTable
 {
-    public override Color ToolStripDropDownBackground => TrayIconService.MenuBackgroundColor;
+    public override Color ToolStripDropDownBackground => AppColorTokens.BackgroundDarkDrawingColor;
     public override Color MenuBorder => Color.Transparent;
     public override Color MenuItemBorder => Color.Transparent;
     public override Color MenuItemSelected => Color.Transparent;
@@ -288,9 +277,9 @@ internal sealed class RoundedMenuColorTable : Forms.ProfessionalColorTable
     public override Color MenuItemPressedGradientBegin => Color.Transparent;
     public override Color MenuItemPressedGradientMiddle => Color.Transparent;
     public override Color MenuItemPressedGradientEnd => Color.Transparent;
-    public override Color ImageMarginGradientBegin => TrayIconService.MenuBackgroundColor;
-    public override Color ImageMarginGradientMiddle => TrayIconService.MenuBackgroundColor;
-    public override Color ImageMarginGradientEnd => TrayIconService.MenuBackgroundColor;
+    public override Color ImageMarginGradientBegin => AppColorTokens.BackgroundDarkDrawingColor;
+    public override Color ImageMarginGradientMiddle => AppColorTokens.BackgroundDarkDrawingColor;
+    public override Color ImageMarginGradientEnd => AppColorTokens.BackgroundDarkDrawingColor;
     public override Color SeparatorDark => Color.Transparent;
     public override Color SeparatorLight => Color.Transparent;
 }

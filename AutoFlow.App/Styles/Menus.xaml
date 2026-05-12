@@ -1,0 +1,66 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:styling="clr-namespace:AutoFlow.App.Styling">
+    <Style x:Key="AppContextMenuStyle" TargetType="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource AppBackgroundDark}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AppMenuBorderBrush}" />
+        <Setter Property="BorderThickness" Value="{x:Static styling:AppMenuTokens.MenuBorderThickness}" />
+        <Setter Property="Foreground" Value="{StaticResource AppForegroundPrimary}" />
+        <Setter Property="FontSize" Value="{x:Static styling:AppMenuTokens.WpfFontSize}" />
+        <Setter Property="FontFamily" Value="{x:Static styling:AppMenuTokens.WpfFontFamily}" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="MinWidth" Value="{x:Static styling:AppMenuTokens.WpfContextMenuMinWidth}" />
+        <Setter Property="Padding" Value="{x:Static styling:AppMenuTokens.WpfContextMenuPadding}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{x:Static styling:AppMenuTokens.ContextMenuCornerRadius}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <StackPanel IsItemsHost="True"
+                                    KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AppContextMenuItemStyle" TargetType="MenuItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="{x:Static styling:AppMenuTokens.MenuItemBorderThickness}" />
+        <Setter Property="Foreground" Value="{StaticResource AppForegroundPrimary}" />
+        <Setter Property="Height" Value="{x:Static styling:AppMenuTokens.WpfMenuItemHeight}" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="{x:Static styling:AppMenuTokens.WpfMenuItemPadding}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="MenuItemBorder"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{x:Static styling:AppMenuTokens.MenuItemCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          ContentSource="Header"
+                                          RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="MenuItemBorder" Property="Background" Value="{StaticResource AppMenuHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource AppMenuDisabledForegroundBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

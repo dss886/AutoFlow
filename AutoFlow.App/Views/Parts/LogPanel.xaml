@@ -19,7 +19,7 @@
                          BorderBrush="Transparent"
                          FontFamily="Consolas"
                          FontSize="14"
-                         Foreground="#DEFFFFFF"
+                         Foreground="{StaticResource AppForegroundMuted}"
                          HorizontalScrollBarVisibility="Auto"
                          Text="{Binding LogOutput, Mode=OneWay}"
                          TextChanged="LogOutputTextBox_OnTextChanged"

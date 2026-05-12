@@ -59,7 +59,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         ToggleRunStateCommand = new AsyncRelayCommand(ToggleRunStateAsync);
         OpenScriptsFolderCommand = new RelayCommand(OpenScriptsFolder);
-        OpenInEditorCommand = new RelayCommand(OpenInEditor);
+        OpenScriptCommand = new RelayCommand<ScriptDefinition>(OpenScript);
+        DeleteScriptCommand = new RelayCommand<ScriptDefinition>(DeleteScript);
         ToggleMousePositionCommand = new RelayCommand(ToggleMousePosition);
         CloseWindowCommand = new RelayCommand(_closeWindow);
 
@@ -143,7 +144,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand OpenScriptsFolderCommand { get; }
 
-    public ICommand OpenInEditorCommand { get; }
+    public ICommand OpenScriptCommand { get; }
+
+    public ICommand DeleteScriptCommand { get; }
 
     public ICommand ToggleMousePositionCommand { get; }
 
@@ -235,24 +238,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
-    private void OpenInEditor()
+    private void OpenScript(ScriptDefinition? script)
     {
-        if (SelectedScript is null)
-        {
-            System.Windows.MessageBox.Show("请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
-        if (!EnsureSelectedScriptExists())
+        var targetScript = ResolveScriptForAction(script);
+        if (targetScript is null)
         {
             return;
         }
 
         Process.Start(new ProcessStartInfo
         {
-            FileName = SelectedScript.FilePath,
+            FileName = targetScript.FilePath,
             UseShellExecute = true,
         });
+    }
+
+    private void DeleteScript(ScriptDefinition? script)
+    {
+        var targetScript = ResolveScriptForAction(script);
+        if (targetScript is null)
+        {
+            return;
+        }
+
+        if (string.Equals(_runnerService.RunningScript?.FilePath, targetScript.FilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            System.Windows.MessageBox.Show("脚本正在运行，请先停止后再删除。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var result = System.Windows.MessageBox.Show(
+            $"确定要删除脚本“{targetScript.Name}”吗？\n删除后不可恢复。",
+            "删除脚本",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(targetScript.FilePath);
+            AppendLog($"已删除脚本: {targetScript.FileName}");
+            LoadScripts();
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"删除脚本失败: {targetScript.FileName}，{ex.Message}");
+            System.Windows.MessageBox.Show($"删除脚本失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void ToggleMousePosition()
@@ -279,7 +316,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private bool EnsureSelectedScriptExists()
     {
-        var selectedScript = SelectedScript;
+        return EnsureScriptExists(SelectedScript);
+    }
+
+    private ScriptDefinition? ResolveScriptForAction(ScriptDefinition? script)
+    {
+        var targetScript = script ?? SelectedScript;
+        if (targetScript is null)
+        {
+            System.Windows.MessageBox.Show("请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            return null;
+        }
+
+        SelectedScript = Scripts.FirstOrDefault(item =>
+            string.Equals(item.FilePath, targetScript.FilePath, StringComparison.OrdinalIgnoreCase))
+            ?? targetScript;
+
+        return EnsureScriptExists(targetScript) ? targetScript : null;
+    }
+
+    private bool EnsureScriptExists(ScriptDefinition? selectedScript)
+    {
         if (selectedScript is null)
         {
             return false;
