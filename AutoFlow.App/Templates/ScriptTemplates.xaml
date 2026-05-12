@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DataTemplate x:Key="ScriptListItemTemplate">
+        <Border Style="{StaticResource AppListItemCardStyle}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Style="{StaticResource AppHeaderLine2}"
+                               Text="{Binding Name}"
+                               TextTrimming="CharacterEllipsis" />
+                    <Border Grid.Column="1">
+                        <TextBlock Style="{StaticResource AppTips}"
+                                   Margin="12,0,0,0"
+                                   Text="{Binding FileName}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Border>
+                </Grid>
+                <TextBlock Margin="0,8,0,0"
+                           Style="{StaticResource AppContent}"
+                           LineHeight="20"
+                           MaxHeight="40"
+                           Text="{Binding Description}"
+                           TextTrimming="CharacterEllipsis"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>

@@ -1,5 +1,7 @@
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
+using AutoFlow.App.Infrastructure;
 using AutoFlow.App.Services;
 
 namespace AutoFlow.App;
@@ -7,6 +9,8 @@ namespace AutoFlow.App;
 public partial class App : System.Windows.Application
 {
     private TrayIconService? _trayIconService;
+    private ICommand? _showMainWindowCommand;
+    private ICommand? _exitApplicationCommand;
 
     public App()
     {
@@ -22,9 +26,9 @@ public partial class App : System.Windows.Application
         try
         {
             var window = new MainWindow();
-            _trayIconService = new TrayIconService(
-                () => ShowMainWindow(window),
-                () => ExitApplication(window));
+            _showMainWindowCommand = new RelayCommand(() => ShowMainWindow(window));
+            _exitApplicationCommand = new RelayCommand(() => ExitApplication(window));
+            _trayIconService = new TrayIconService(_showMainWindowCommand, _exitApplicationCommand);
             MainWindow = window;
             window.Show();
         }

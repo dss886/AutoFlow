@@ -1,40 +1,24 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Threading;
-using AutoFlow.App.Models;
 using AutoFlow.App.Services;
+using AutoFlow.App.ViewModels;
 
 namespace AutoFlow.App;
 
-public partial class MainWindow : Window, INotifyPropertyChanged
+public partial class MainWindow : Window
 {
-    private const int MaxLogLineCount = 3000;
     private const int WhMouseLl = 14;
     private const int WmXButtonDown = 0x020B;
     private const int WmXButtonUp = 0x020C;
     private const ushort XButton1 = 0x0001;
 
-    private readonly ScriptCatalogService _catalogService;
-    private readonly ScriptRunnerService _runnerService;
-    private readonly FileSystemWatcher _fileSystemWatcher;
     private readonly DispatcherTimer _mousePositionTimer;
-    private readonly DispatcherTimer _scriptRefreshTimer;
     private readonly LowLevelMouseProc _mouseHookProc;
-    private readonly Queue<string> _logEntries = new();
-    private ScriptDefinition? _selectedScript;
-    private string _logOutput = string.Empty;
-    private string _runStatusText = "空闲";
-    private string _statusMessage = "就绪";
-    private string _mousePositionText = "鼠标位置: X 0, Y 0";
     private bool _allowExit;
-    private bool _isMousePositionVisible;
     private bool _isToggleMouseButtonPressed;
     private IntPtr _mouseHookHandle;
 
@@ -42,148 +26,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         InitializeComponent();
 
+        ViewModel = new MainWindowViewModel(Close);
         Style = (Style)FindResource(typeof(Window));
         SourceInitialized += MainWindow_OnSourceInitialized;
+        DataContext = ViewModel;
+        ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;
 
-        DataContext = this;
-        ScriptsDirectory = PathService.ResolveScriptsDirectory();
-        PathService.EnsureDirectory(ScriptsDirectory);
-
-        _catalogService = new ScriptCatalogService();
-        _runnerService = new ScriptRunnerService(new LuaAutomationRuntime(new AutomationInputService()));
-        _runnerService.LogGenerated += RunnerService_OnLogGenerated;
-        _runnerService.ScriptStateChanged += RunnerService_OnScriptStateChanged;
         _mouseHookProc = MouseHookCallback;
         _mousePositionTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(100),
         };
         _mousePositionTimer.Tick += MousePositionTimer_OnTick;
-        _scriptRefreshTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(200),
-        };
-        _scriptRefreshTimer.Tick += ScriptRefreshTimer_OnTick;
-
-        _fileSystemWatcher = new FileSystemWatcher(ScriptsDirectory, "*.lua")
-        {
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime,
-            IncludeSubdirectories = false,
-            EnableRaisingEvents = true,
-        };
-
-        _fileSystemWatcher.Created += FileSystemWatcher_OnChanged;
-        _fileSystemWatcher.Changed += FileSystemWatcher_OnChanged;
-        _fileSystemWatcher.Deleted += FileSystemWatcher_OnChanged;
-        _fileSystemWatcher.Renamed += FileSystemWatcher_OnChanged;
-
-        LoadScripts();
-        AppendLog("应用已启动。");
-        AppendLog($"脚本目录: {ScriptsDirectory}");
     }
 
-    public ObservableCollection<ScriptDefinition> Scripts { get; } = new();
-
-    public string ScriptsDirectory { get; }
-
-    public ScriptDefinition? SelectedScript
-    {
-        get => _selectedScript;
-        set
-        {
-            if (_selectedScript == value)
-            {
-                return;
-            }
-
-            _selectedScript = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string RunStatusText
-    {
-        get => _runStatusText;
-        set
-        {
-            if (_runStatusText == value)
-            {
-                return;
-            }
-
-            _runStatusText = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string LogOutput
-    {
-        get => _logOutput;
-        set
-        {
-            if (_logOutput == value)
-            {
-                return;
-            }
-
-            _logOutput = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string StatusMessage
-    {
-        get => _statusMessage;
-        set
-        {
-            if (_statusMessage == value)
-            {
-                return;
-            }
-
-            _statusMessage = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public bool IsScriptRunning => _runnerService.IsRunning;
-
-    public string RunControlButtonText => IsScriptRunning ? "停止脚本（鼠标后退键）" : "运行脚本（鼠标后退键）";
-
-    public bool IsMousePositionVisible
-    {
-        get => _isMousePositionVisible;
-        private set
-        {
-            if (_isMousePositionVisible == value)
-            {
-                return;
-            }
-
-            _isMousePositionVisible = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(MousePositionToggleButtonText));
-        }
-    }
-
-    public string MousePositionText
-    {
-        get => _mousePositionText;
-        private set
-        {
-            if (_mousePositionText == value)
-            {
-                return;
-            }
-
-            _mousePositionText = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string MousePositionToggleButtonText => IsMousePositionVisible ? "隐藏鼠标位置" : "显示鼠标位置";
-
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public MainWindowViewModel ViewModel { get; }
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetCursorPos(out NativePoint lpPoint);
@@ -221,98 +78,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         public IntPtr ExtraInfo;
     }
 
-    private async void RunButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        await ToggleRunStateAsync();
-    }
-
-    private async Task RunSelectedScriptAsync()
-    {
-        if (SelectedScript is null)
-        {
-            System.Windows.MessageBox.Show(this, "请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
-        if (!EnsureSelectedScriptExists())
-        {
-            return;
-        }
-
-        try
-        {
-            await _runnerService.StartAsync(SelectedScript);
-        }
-        catch (Exception ex)
-        {
-            AppendLog($"启动脚本失败: {ex.Message}");
-            RunStatusText = "启动失败";
-            StatusMessage = "启动失败";
-        }
-    }
-
-    private async Task ToggleRunStateAsync()
-    {
-        if (IsScriptRunning)
-        {
-            StopRunningScript();
-            return;
-        }
-
-        await RunSelectedScriptAsync();
-    }
-
-    private void StopRunningScript()
-    {
-        _runnerService.Stop();
-    }
-
-    private void OpenScriptsFolderButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "explorer.exe",
-            Arguments = ScriptsDirectory,
-            UseShellExecute = true,
-        });
-    }
-
-    private void OpenInEditorButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (SelectedScript is null)
-        {
-            System.Windows.MessageBox.Show(this, "请先选择一个脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
-        if (!EnsureSelectedScriptExists())
-        {
-            return;
-        }
-
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = SelectedScript.FilePath,
-            UseShellExecute = true,
-        });
-    }
-
-    private void ToggleMousePositionButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        SetMousePositionTracking(!IsMousePositionVisible);
-    }
-
     private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             DragMove();
         }
-    }
-
-    private void CloseButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        Close();
     }
 
     private void MainWindow_OnSourceInitialized(object? sender, EventArgs e)
@@ -324,10 +95,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     protected override void OnClosed(EventArgs e)
     {
         _mousePositionTimer.Stop();
-        _scriptRefreshTimer.Stop();
         RemoveMouseHook();
-        _runnerService.Stop();
-        _fileSystemWatcher.Dispose();
+        ViewModel.PropertyChanged -= ViewModel_OnPropertyChanged;
+        ViewModel.Dispose();
         base.OnClosed(e);
     }
 
@@ -356,26 +126,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _mouseHookHandle = SetWindowsHookEx(WhMouseLl, _mouseHookProc, moduleHandle, 0);
         if (_mouseHookHandle != IntPtr.Zero)
         {
-            AppendLog("已启用鼠标后退键监听。");
+            ViewModel.AppendLogMessage("已启用鼠标后退键监听。");
             return;
         }
 
         var errorCode = Marshal.GetLastWin32Error();
-        AppendLog($"鼠标后退键监听启用失败，错误代码: {errorCode}");
-    }
-
-    private void SetMousePositionTracking(bool isEnabled)
-    {
-        IsMousePositionVisible = isEnabled;
-
-        if (isEnabled)
-        {
-            UpdateMousePosition();
-            _mousePositionTimer.Start();
-            return;
-        }
-
-        _mousePositionTimer.Stop();
+        ViewModel.AppendLogMessage($"鼠标后退键监听启用失败，错误代码: {errorCode}");
     }
 
     private void MousePositionTimer_OnTick(object? sender, EventArgs e)
@@ -390,7 +146,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        MousePositionText = $"鼠标位置: X {point.X}, Y {point.Y}";
+        ViewModel.UpdateMousePosition(point.X, point.Y);
     }
 
     private void RemoveMouseHook()
@@ -420,7 +176,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (message == WmXButtonDown && !_isToggleMouseButtonPressed)
             {
                 _isToggleMouseButtonPressed = true;
-                Dispatcher.BeginInvoke(new Action(() => _ = ToggleRunStateAsync()));
+                Dispatcher.BeginInvoke(new Action(ViewModel.ExecuteToggleRunStateCommand));
             }
             else if (message == WmXButtonUp)
             {
@@ -431,109 +187,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
     }
 
-    private void LoadScripts()
+    private void ViewModel_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        var selectedPath = SelectedScript?.FilePath;
-        var scripts = _catalogService.LoadScripts(ScriptsDirectory);
-
-        Scripts.Clear();
-        foreach (var script in scripts)
+        if (e.PropertyName != nameof(MainWindowViewModel.IsMousePositionVisible))
         {
-            script.IsRunning = string.Equals(script.FilePath, _runnerService.RunningScript?.FilePath, StringComparison.OrdinalIgnoreCase);
-            Scripts.Add(script);
+            return;
         }
 
-        SelectedScript = Scripts.FirstOrDefault(item =>
-            string.Equals(item.FilePath, selectedPath, StringComparison.OrdinalIgnoreCase))
-            ?? Scripts.FirstOrDefault();
-
-        StatusMessage = Scripts.Count == 0 ? "脚本目录为空" : $"已加载 {Scripts.Count} 个脚本";
-    }
-
-    private bool EnsureSelectedScriptExists()
-    {
-        var selectedScript = SelectedScript;
-        if (selectedScript is null)
+        if (ViewModel.IsMousePositionVisible)
         {
-            return false;
+            UpdateMousePosition();
+            _mousePositionTimer.Start();
+            return;
         }
 
-        if (File.Exists(selectedScript.FilePath))
-        {
-            return true;
-        }
-
-        LoadScripts();
-        AppendLog($"脚本文件不存在，已跳过操作: {selectedScript.FileName}");
-        StatusMessage = "脚本文件已不存在";
-        System.Windows.MessageBox.Show(this, "所选脚本文件已不存在，列表已自动刷新。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-        return false;
-    }
-
-    private void AppendLog(string message)
-    {
-        var timestamped = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        _logEntries.Enqueue(timestamped);
-
-        while (_logEntries.Count > MaxLogLineCount)
-        {
-            _logEntries.Dequeue();
-        }
-
-        LogOutput = string.Join(Environment.NewLine, _logEntries);
-    }
-
-    private void RunnerService_OnLogGenerated(string message)
-    {
-        Dispatcher.Invoke(() => AppendLog(message));
-    }
-
-    private void RunnerService_OnScriptStateChanged(ScriptDefinition? script, bool isRunning)
-    {
-        Dispatcher.Invoke(() =>
-        {
-            if (script is not null)
-            {
-                var item = Scripts.FirstOrDefault(candidate =>
-                    string.Equals(candidate.FilePath, script.FilePath, StringComparison.OrdinalIgnoreCase));
-
-                if (item is not null)
-                {
-                    item.IsRunning = isRunning;
-                }
-            }
-
-            RunStatusText = isRunning ? "运行中" : "空闲";
-            StatusMessage = isRunning ? "脚本运行中" : "就绪";
-            OnPropertyChanged(nameof(IsScriptRunning));
-            OnPropertyChanged(nameof(RunControlButtonText));
-        });
-    }
-
-    private void ScriptRefreshTimer_OnTick(object? sender, EventArgs e)
-    {
-        _scriptRefreshTimer.Stop();
-        LoadScripts();
-        AppendLog("检测到脚本目录变化，已自动刷新。");
-    }
-
-    private void FileSystemWatcher_OnChanged(object sender, FileSystemEventArgs e)
-    {
-        Dispatcher.InvokeAsync(() =>
-        {
-            _scriptRefreshTimer.Stop();
-            _scriptRefreshTimer.Start();
-        });
-    }
-
-    private void LogOutputTextBox_OnTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        LogOutputTextBox.ScrollToEnd();
-    }
-
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        _mousePositionTimer.Stop();
     }
 
     public void PrepareForExit()

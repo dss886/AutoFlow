@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        xmlns:views="clr-namespace:AutoFlow.App.Views.Parts"
         mc:Ignorable="d"
         Title="AutoFlow - Windows 自动化脚本工具"
         Icon="Assets/AppIcon.png"
@@ -50,8 +51,8 @@
                 
                 <Button Grid.Column="1"
                         VerticalAlignment="Top"
-                        Style="{StaticResource AppTitleBarActionButtonStyle}"
-                        Click="CloseButton_OnClick">
+                        Command="{Binding CloseWindowCommand}"
+                        Style="{StaticResource AppTitleBarActionButtonStyle}">
                     <Image Width="12"
                            Height="12"
                            IsHitTestVisible="False"
@@ -67,72 +68,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0"
-                        Style="{StaticResource Card}">
-                    <DockPanel>
-                        <Grid DockPanel.Dock="Top"
-                              Margin="4,0,4,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Style="{StaticResource AppHeaderLine1}"
-                                       Text="脚本列表" />
-                            <Button Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource AppTextActionButtonStyle}"
-                                    Click="OpenScriptsFolderButton_OnClick"
-                                    Content="脚本目录" />
-                        </Grid>
-
-                        <ListBox x:Name="ScriptsListBox"
-                                 BorderThickness="0"
-                                 Padding="0"
-                                 Background="Transparent"
-                                 ScrollViewer.CanContentScroll="False"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 ItemContainerStyle="{StaticResource AppListBoxContainerStyle}"
-                                 ItemsSource="{Binding Scripts}"
-                                 SelectedItem="{Binding SelectedScript, Mode=TwoWay}" d:ItemsSource="{d:SampleData ItemCount=5}">
-                            <ListBox.Resources>
-                                <Style TargetType="ScrollBar"
-                                       BasedOn="{StaticResource AppScrollBarStyle}" />
-                            </ListBox.Resources>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource AppListItemCardStyle}">
-                                        <StackPanel>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Style="{StaticResource AppHeaderLine2}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           Text="{Binding Name}" />
-                                                <Border Grid.Column="1">
-                                                    <TextBlock Style="{StaticResource AppTips}"
-                                                               Margin="12,0,0,0"
-                                                               Text="{Binding FileName}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </Border>
-                                            </Grid>
-                                            <TextBlock Margin="0,8,0,0"
-                                                       Style="{StaticResource AppContent}"
-                                                       LineHeight="20"
-                                                       MaxHeight="40"
-                                                       Text="{Binding Description}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </DockPanel>
-                </Border>
+                <views:ScriptListPanel Grid.Column="0" />
 
                 <Grid Grid.Column="2">
                     <Grid.RowDefinitions>
@@ -141,129 +77,9 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0"
-                            Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+                    <views:RunControlPanel Grid.Row="0" />
 
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Style="{StaticResource AppHeaderLine1}" 
-                                               Margin="4,0,0,0"
-                                               Text="运行控制" />
-                                    <TextBlock Margin="12,2,0,0"
-                                               VerticalAlignment="Center"
-                                               Text="{Binding MousePositionText}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock"
-                                                   BasedOn="{StaticResource AppTips}">
-                                                <Setter Property="Visibility"
-                                                        Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsMousePositionVisible}"
-                                                                 Value="True">
-                                                        <Setter Property="Visibility"
-                                                                Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                                <Border Grid.Column="1"
-                                        Margin="0,0,4,0"
-                                        Tag="{Binding RunStatusText}"
-                                        Style="{StaticResource StatusBadgeBorderStyle}">
-                                    <TextBlock Tag="{Binding RunStatusText}"
-                                               Style="{StaticResource StatusBadgeTextStyle}"
-                                               Text="{Binding RunStatusText}" />
-                                </Border>
-                            </Grid>
-
-                            <StackPanel Margin="0,16,0,0"
-                                        Orientation="Horizontal">
-                                <Button Width="160"
-                                        Margin="0,0,8,0"
-                                        Click="RunButton_OnClick"
-                                        Content="{Binding RunControlButtonText}">
-                                    <Button.Style>
-                                        <Style TargetType="Button"
-                                               BasedOn="{StaticResource PrimaryButtonStyle}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsScriptRunning}"
-                                                             Value="True">
-                                                    <Setter Property="Background"
-                                                            Value="#FFDC2626" />
-                                                    <Setter Property="BorderBrush"
-                                                            Value="#FFDC2626" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                                <Button Width="142"
-                                        Margin="0,0,8,0"
-                                        Style="{StaticResource SecondaryButtonStyle}"
-                                        Click="OpenInEditorButton_OnClick"
-                                        Content="外部编辑器打开" />
-                                <Button Width="160"
-                                        Margin="0,0,8,0"
-                                        Click="ToggleMousePositionButton_OnClick"
-                                        Content="{Binding MousePositionToggleButtonText}">
-                                    <Button.Style>
-                                        <Style TargetType="Button"
-                                               BasedOn="{StaticResource SecondaryButtonStyle}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsMousePositionVisible}"
-                                                             Value="True">
-                                                    <Setter Property="Foreground"
-                                                            Value="#FF0F172A" />
-                                                    <Setter Property="Background"
-                                                            Value="#FFDBEAFE" />
-                                                    <Setter Property="BorderBrush"
-                                                            Value="#FF93C5FD" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Row="2"
-                            Style="{StaticResource Card}">
-                        <DockPanel>
-                            <DockPanel DockPanel.Dock="Top" Margin="4,0,4,12">
-                                <TextBlock Style="{StaticResource AppHeaderLine1}" Text="运行日志" />
-                            </DockPanel>
-
-                            <Border Background="{DynamicResource AppBackgroundDark}"
-                                    CornerRadius="6">
-                                <TextBox x:Name="LogOutputTextBox"
-                                         IsReadOnly="True"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         FontFamily="Consolas"
-                                         Background="Transparent"
-                                         BorderThickness="0"
-                                         Padding="6"
-                                         FontSize="14"
-                                         BorderBrush="Transparent"
-                                         Foreground="#DEFFFFFF"
-                                         TextChanged="LogOutputTextBox_OnTextChanged"
-                                         Text="{Binding LogOutput}">
-                                    <TextBox.Resources>
-                                        <Style TargetType="ScrollBar"
-                                               BasedOn="{StaticResource LogOutputScrollBarStyle}" />
-                                    </TextBox.Resources>
-                                </TextBox>
-                            </Border>
-                        </DockPanel>
-                    </Border>
+                    <views:LogPanel Grid.Row="2" />
                 </Grid>
             </Grid>
         </Grid>

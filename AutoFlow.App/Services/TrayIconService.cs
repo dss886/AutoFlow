@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using System.Windows.Input;
 using DrawingFont = System.Drawing.Font;
 using DrawingFontStyle = System.Drawing.FontStyle;
 using DrawingGraphicsUnit = System.Drawing.GraphicsUnit;
@@ -23,15 +24,15 @@ internal sealed class TrayIconService : IDisposable
     private readonly Icon _notifyIconImage;
     private readonly DrawingFont _notifyMenuFont;
 
-    public TrayIconService(Action onOpenMainWindow, Action onExitApplication)
+    public TrayIconService(ICommand openMainWindowCommand, ICommand exitApplicationCommand)
     {
         _notifyMenuFont = new DrawingFont("Microsoft YaHei", 10F, DrawingFontStyle.Regular, DrawingGraphicsUnit.Point);
 
         var openMenuItem = CreateNotifyMenuItem("打开主窗口");
-        openMenuItem.Click += (_, _) => onOpenMainWindow();
+        openMenuItem.Click += (_, _) => ExecuteCommand(openMainWindowCommand);
 
         var exitMenuItem = CreateNotifyMenuItem("退出程序");
-        exitMenuItem.Click += (_, _) => onExitApplication();
+        exitMenuItem.Click += (_, _) => ExecuteCommand(exitApplicationCommand);
 
         var contextMenu = new RoundedContextMenuStrip
         {
@@ -60,7 +61,7 @@ internal sealed class TrayIconService : IDisposable
         {
             if (e.Button == Forms.MouseButtons.Left)
             {
-                onOpenMainWindow();
+                ExecuteCommand(openMainWindowCommand);
             }
         };
     }
@@ -94,6 +95,16 @@ internal sealed class TrayIconService : IDisposable
             var bottom = index == contextMenu.Items.Count - 1 ? ContextMenuOuterPadding : 0;
             item.Margin = new Forms.Padding(ContextMenuOuterPadding, top, ContextMenuOuterPadding, bottom);
         }
+    }
+
+    private static void ExecuteCommand(ICommand command)
+    {
+        if (!command.CanExecute(null))
+        {
+            return;
+        }
+
+        command.Execute(null);
     }
 
     private static Icon LoadNotifyIcon()
