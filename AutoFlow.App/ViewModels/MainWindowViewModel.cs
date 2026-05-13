@@ -62,6 +62,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OpenScriptCommand = new RelayCommand<ScriptDefinition>(OpenScript);
         DeleteScriptCommand = new RelayCommand<ScriptDefinition>(DeleteScript);
         ToggleMousePositionCommand = new RelayCommand(ToggleMousePosition);
+        OpenSettingsCommand = new RelayCommand(OpenSettings);
         CloseWindowCommand = new RelayCommand(_closeWindow);
 
         LoadScripts();
@@ -105,7 +106,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsScriptRunning => _runnerService.IsRunning;
 
-    public string RunControlButtonText => IsScriptRunning ? "停止脚本（鼠标后退键）" : "运行脚本（鼠标后退键）";
+    public string RunControlButtonText => IsScriptRunning ? "停止" : "运行";
 
     public bool IsMousePositionVisible
     {
@@ -138,7 +139,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string MousePositionToggleButtonText => IsMousePositionVisible ? "隐藏鼠标位置" : "显示鼠标位置";
+    public string MousePositionToggleButtonText => "鼠标工具";
 
     public ICommand ToggleRunStateCommand { get; }
 
@@ -149,6 +150,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand DeleteScriptCommand { get; }
 
     public ICommand ToggleMousePositionCommand { get; }
+
+    public ICommand OpenSettingsCommand { get; }
 
     public ICommand CloseWindowCommand { get; }
 
@@ -203,6 +206,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _ = RunSelectedScriptAsync();
+    }
+
+    private static void OpenSettings()
+    {
+        System.Windows.MessageBox.Show("设置面板尚未实现。", "设置", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async Task RunSelectedScriptAsync()

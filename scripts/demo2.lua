@@ -1,5 +1,5 @@
 -- @name: 演示脚本
--- @description: 每隔 500 毫秒移动鼠标，并发送一次 Ctrl+Shift+S 组合键。运行前请确认当前前台窗口安全可操作。
+-- @description: 每 500 毫秒移动鼠标，并发送一次 Ctrl+Shift+S 组合键
 
 host.log("演示脚本启动")
 

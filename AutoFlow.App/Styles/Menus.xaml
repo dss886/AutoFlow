@@ -2,10 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:styling="clr-namespace:AutoFlow.App.Styling">
     <Style x:Key="AppContextMenuStyle" TargetType="ContextMenu">
-        <Setter Property="Background" Value="{StaticResource AppBackgroundDark}" />
-        <Setter Property="BorderBrush" Value="{StaticResource AppMenuBorderBrush}" />
+        <Setter Property="Background" Value="{StaticResource BrushBackgroundDark}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBackground}" />
         <Setter Property="BorderThickness" Value="{x:Static styling:AppMenuTokens.MenuBorderThickness}" />
-        <Setter Property="Foreground" Value="{StaticResource AppForegroundPrimary}" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite87}" />
         <Setter Property="FontSize" Value="{x:Static styling:AppMenuTokens.WpfFontSize}" />
         <Setter Property="FontFamily" Value="{x:Static styling:AppMenuTokens.WpfFontFamily}" />
         <Setter Property="HasDropShadow" Value="False" />
@@ -32,7 +32,7 @@
     <Style x:Key="AppContextMenuItemStyle" TargetType="MenuItem">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="{x:Static styling:AppMenuTokens.MenuItemBorderThickness}" />
-        <Setter Property="Foreground" Value="{StaticResource AppForegroundPrimary}" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite87}" />
         <Setter Property="Height" Value="{x:Static styling:AppMenuTokens.WpfMenuItemHeight}" />
         <Setter Property="Margin" Value="0" />
         <Setter Property="Padding" Value="{x:Static styling:AppMenuTokens.WpfMenuItemPadding}" />
@@ -53,10 +53,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="MenuItemBorder" Property="Background" Value="{StaticResource AppMenuHoverBrush}" />
+                            <Setter TargetName="MenuItemBorder" Property="Background" Value="{StaticResource BrushBackground}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="{StaticResource AppMenuDisabledForegroundBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource BrushWhite54}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -34,8 +34,8 @@ internal sealed class TrayIconService : IDisposable
             ShowCheckMargin = false,
             Font = _notifyMenuFont,
             MinimumSize = new DrawingSize(AppMenuTokens.TrayContextMenuMinWidth, AppMenuTokens.GetTrayContextMenuMinHeight(2)),
-            BackColor = AppColorTokens.BackgroundDarkDrawingColor,
-            ForeColor = AppColorTokens.ForegroundPrimaryDrawingColor,
+            BackColor = AppColorTokens.DrawingColorBackgroundDark,
+            ForeColor = AppColorTokens.DrawingColorWhite,
         };
 
         contextMenu.Items.Add(openMenuItem);
@@ -76,7 +76,7 @@ internal sealed class TrayIconService : IDisposable
             Size = new DrawingSize(AppMenuTokens.TrayMenuItemWidth, AppMenuTokens.TrayMenuItemHeight),
             Margin = new Forms.Padding(0),
             Padding = new Forms.Padding(AppMenuTokens.TrayMenuItemHorizontalPadding, 0, AppMenuTokens.TrayMenuItemHorizontalPadding, 0),
-            ForeColor = AppColorTokens.ForegroundPrimaryDrawingColor,
+            ForeColor = AppColorTokens.DrawingColorWhite,
         };
     }
 
@@ -135,8 +135,8 @@ internal sealed class RoundedContextMenuStrip : Forms.ContextMenuStrip
     public RoundedContextMenuStrip()
     {
         Renderer = new RoundedMenuRenderer();
-        BackColor = AppColorTokens.BackgroundDarkDrawingColor;
-        ForeColor = AppColorTokens.ForegroundPrimaryDrawingColor;
+        BackColor = AppColorTokens.DrawingColorBackgroundDark;
+        ForeColor = AppColorTokens.DrawingColorWhite;
     }
 
     protected override void OnOpening(System.ComponentModel.CancelEventArgs e)
@@ -198,7 +198,7 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
 
         using var backgroundPath = CreateRoundedPath(bounds, AppMenuTokens.ContextMenuCornerRadiusValue);
         using var backgroundBrush = new SolidBrush(e.ToolStrip.BackColor);
-        using var borderPen = new Pen(AppColorTokens.MenuBorderDrawingColor);
+        using var borderPen = new Pen(AppColorTokens.DrawingColorBackground);
 
         e.Graphics.FillPath(backgroundBrush, backgroundPath);
         e.Graphics.DrawPath(borderPen, backgroundPath);
@@ -217,7 +217,7 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
         bounds.Inflate(-2, 0);
 
         using var path = CreateRoundedPath(bounds, AppMenuTokens.MenuItemCornerRadiusValue);
-        using var brush = new SolidBrush(AppColorTokens.MenuHoverDrawingColor);
+        using var brush = new SolidBrush(AppColorTokens.DrawingColorBackground);
         e.Graphics.FillPath(brush, path);
     }
 
@@ -229,7 +229,7 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
             Math.Max(0, e.Item.Width - e.Item.Padding.Horizontal),
             e.Item.Height);
 
-        var textColor = e.TextColor.IsEmpty ? AppColorTokens.ForegroundPrimaryDrawingColor : e.TextColor;
+        var textColor = e.TextColor.IsEmpty ? AppColorTokens.DrawingColorWhite : e.TextColor;
         Forms.TextRenderer.DrawText(
             e.Graphics,
             e.Text,
@@ -268,7 +268,7 @@ internal sealed class RoundedMenuRenderer : Forms.ToolStripProfessionalRenderer
 
 internal sealed class RoundedMenuColorTable : Forms.ProfessionalColorTable
 {
-    public override Color ToolStripDropDownBackground => AppColorTokens.BackgroundDarkDrawingColor;
+    public override Color ToolStripDropDownBackground => AppColorTokens.DrawingColorBackgroundDark;
     public override Color MenuBorder => Color.Transparent;
     public override Color MenuItemBorder => Color.Transparent;
     public override Color MenuItemSelected => Color.Transparent;
@@ -277,9 +277,9 @@ internal sealed class RoundedMenuColorTable : Forms.ProfessionalColorTable
     public override Color MenuItemPressedGradientBegin => Color.Transparent;
     public override Color MenuItemPressedGradientMiddle => Color.Transparent;
     public override Color MenuItemPressedGradientEnd => Color.Transparent;
-    public override Color ImageMarginGradientBegin => AppColorTokens.BackgroundDarkDrawingColor;
-    public override Color ImageMarginGradientMiddle => AppColorTokens.BackgroundDarkDrawingColor;
-    public override Color ImageMarginGradientEnd => AppColorTokens.BackgroundDarkDrawingColor;
+    public override Color ImageMarginGradientBegin => AppColorTokens.DrawingColorBackgroundDark;
+    public override Color ImageMarginGradientMiddle => AppColorTokens.DrawingColorBackgroundDark;
+    public override Color ImageMarginGradientEnd => AppColorTokens.DrawingColorBackgroundDark;
     public override Color SeparatorDark => Color.Transparent;
     public override Color SeparatorLight => Color.Transparent;
 }

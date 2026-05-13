@@ -9,7 +9,7 @@
                            Text="运行日志" />
             </DockPanel>
 
-            <Border Background="{DynamicResource AppBackgroundDark}"
+            <Border Background="{DynamicResource BrushBackgroundDark}"
                     CornerRadius="6">
                 <TextBox x:Name="LogOutputTextBox"
                          IsReadOnly="True"
@@ -19,7 +19,7 @@
                          BorderBrush="Transparent"
                          FontFamily="Consolas"
                          FontSize="14"
-                         Foreground="{StaticResource AppForegroundMuted}"
+                         Foreground="{StaticResource BrushWhite87}"
                          HorizontalScrollBarVisibility="Auto"
                          Text="{Binding LogOutput, Mode=OneWay}"
                          TextChanged="LogOutputTextBox_OnTextChanged"

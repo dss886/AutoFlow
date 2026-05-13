@@ -8,85 +8,67 @@ namespace AutoFlow.App.Styling;
 
 public static class AppColorTokens
 {
-    public static MediaColor BackgroundDarkColor { get; } = ParseHex("#33333D");
+    /*
+    * App Color Tokens
+    */
 
-    public static MediaColor BackgroundColor { get; } = ParseHex("#42424C");
+    public static MediaColor ColorBackgroundDark { get; } = ParseHex("#33333D");
 
-    public static MediaColor PrimaryColor { get; } = ParseHex("#2196F3");
+    public static MediaColor ColorBackground { get; } = ParseHex("#42424C");
 
-    public static MediaColor PrimaryButtonColor { get; } = ParseHex("#2563EB");
+    public static MediaColor ColorPrimaryGreen { get; } = ParseHex("#1EB980");
 
-    public static MediaColor ButtonDisabledForegroundColor { get; } = ParseHex("#94A3B8");
+    public static MediaColor ColorPrimaryYellow { get; } = ParseHex("#FFCF44");
 
-    public static MediaColor ButtonDisabledBackgroundColor { get; } = ParseHex("#E2E8F0");
+    public static MediaColor ColorPrimaryOrange { get; } = ParseHex("#FF6859");
 
-    public static MediaColor SecondaryButtonForegroundColor { get; } = ParseHex("#1E3A8A");
+    public static MediaColor ColorWhite { get; } = ParseHex("#FFFFFF");
 
-    public static MediaColor SecondaryButtonBackgroundColor { get; } = ParseHex("#EFF6FF");
+    public static MediaColor ColorWhite87 { get; } = ParseHex("#DEFFFFFF");
 
-    public static MediaColor SecondaryButtonBorderColor { get; } = ParseHex("#D0E2FF");
+    public static MediaColor ColorWhite54 { get; } = ParseHex("#8AFFFFFF");
 
-    public static MediaColor DangerColor { get; } = ParseHex("#DC2626");
+    public static MediaColor ColorBlack { get; } = ParseHex("#000000");
 
-    public static MediaColor AccentActiveForegroundColor { get; } = ParseHex("#0F172A");
+    public static MediaColor ColorBlack87 { get; } = ParseHex("#DE000000");
 
-    public static MediaColor AccentActiveBackgroundColor { get; } = ParseHex("#DBEAFE");
+    public static MediaColor ColorBlack54 { get; } = ParseHex("#8A000000");
 
-    public static MediaColor AccentActiveBorderColor { get; } = ParseHex("#93C5FD");
+    /*
+    * App Brush Tokens
+    */
 
-    public static MediaColor ForegroundPrimaryColor { get; } = ParseHex("#FFFFFF");
+    public static MediaBrush BrushBackgroundDark { get; } = CreateFrozenBrush(ColorBackgroundDark);
 
-    public static MediaColor ForegroundMutedColor { get; } = ParseHex("#DEFFFFFF");
+    public static MediaBrush BrushBackground { get; } = CreateFrozenBrush(ColorBackground);
 
-    public static MediaColor MenuBorderColor { get; } = ParseHex("#585868");
+    public static MediaBrush BrushPrimaryGreen { get; } = CreateFrozenBrush(ColorPrimaryGreen);
 
-    public static MediaColor MenuHoverColor { get; } = ParseHex("#484856");
+    public static MediaBrush BrushPrimaryWarning { get; } = CreateFrozenBrush(ColorPrimaryYellow);
 
-    public static MediaColor MenuDisabledForegroundColor { get; } = ParseHex("#80FFFFFF");
+    public static MediaBrush BrushPrimaryDanger { get; } = CreateFrozenBrush(ColorPrimaryOrange);
 
-    public static MediaBrush BackgroundDarkBrush { get; } = CreateFrozenBrush(BackgroundDarkColor);
+    public static MediaBrush BrushWhite { get; } = CreateFrozenBrush(ColorWhite);
 
-    public static MediaBrush BackgroundBrush { get; } = CreateFrozenBrush(BackgroundColor);
+    public static MediaBrush BrushWhite87 { get; } = CreateFrozenBrush(ColorWhite87);
 
-    public static MediaBrush PrimaryBrush { get; } = CreateFrozenBrush(PrimaryColor);
+    public static MediaBrush BrushWhite54 { get; } = CreateFrozenBrush(ColorWhite54);
 
-    public static MediaBrush PrimaryButtonBrush { get; } = CreateFrozenBrush(PrimaryButtonColor);
+    public static MediaBrush BrushBlack { get; } = CreateFrozenBrush(ColorBlack);
 
-    public static MediaBrush ButtonDisabledForegroundBrush { get; } = CreateFrozenBrush(ButtonDisabledForegroundColor);
+    public static MediaBrush BrushBlack87 { get; } = CreateFrozenBrush(ColorBlack87);
 
-    public static MediaBrush ButtonDisabledBackgroundBrush { get; } = CreateFrozenBrush(ButtonDisabledBackgroundColor);
+    public static MediaBrush BrushBlack54 { get; } = CreateFrozenBrush(ColorBlack54);
 
-    public static MediaBrush SecondaryButtonForegroundBrush { get; } = CreateFrozenBrush(SecondaryButtonForegroundColor);
+    /*
+    *  App Drawing Color for WinForms
+    */
 
-    public static MediaBrush SecondaryButtonBackgroundBrush { get; } = CreateFrozenBrush(SecondaryButtonBackgroundColor);
+    public static DrawingColor DrawingColorBackgroundDark { get; } = ToDrawingColor(ColorBackgroundDark);
 
-    public static MediaBrush SecondaryButtonBorderBrush { get; } = CreateFrozenBrush(SecondaryButtonBorderColor);
+    public static DrawingColor DrawingColorWhite { get; } = ToDrawingColor(ColorWhite);
 
-    public static MediaBrush DangerBrush { get; } = CreateFrozenBrush(DangerColor);
-
-    public static MediaBrush AccentActiveForegroundBrush { get; } = CreateFrozenBrush(AccentActiveForegroundColor);
-
-    public static MediaBrush AccentActiveBackgroundBrush { get; } = CreateFrozenBrush(AccentActiveBackgroundColor);
-
-    public static MediaBrush AccentActiveBorderBrush { get; } = CreateFrozenBrush(AccentActiveBorderColor);
-
-    public static MediaBrush ForegroundPrimaryBrush { get; } = CreateFrozenBrush(ForegroundPrimaryColor);
-
-    public static MediaBrush ForegroundMutedBrush { get; } = CreateFrozenBrush(ForegroundMutedColor);
-
-    public static MediaBrush MenuBorderBrush { get; } = CreateFrozenBrush(MenuBorderColor);
-
-    public static MediaBrush MenuHoverBrush { get; } = CreateFrozenBrush(MenuHoverColor);
-
-    public static MediaBrush MenuDisabledForegroundBrush { get; } = CreateFrozenBrush(MenuDisabledForegroundColor);
-
-    public static DrawingColor BackgroundDarkDrawingColor { get; } = ToDrawingColor(BackgroundDarkColor);
-
-    public static DrawingColor ForegroundPrimaryDrawingColor { get; } = ToDrawingColor(ForegroundPrimaryColor);
-
-    public static DrawingColor MenuBorderDrawingColor { get; } = ToDrawingColor(MenuBorderColor);
-
-    public static DrawingColor MenuHoverDrawingColor { get; } = ToDrawingColor(MenuHoverColor);
+    public static DrawingColor DrawingColorBackground { get; } = ToDrawingColor(ColorBackground);
 
     private static MediaSolidColorBrush CreateFrozenBrush(MediaColor color)
     {

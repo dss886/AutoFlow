@@ -1,10 +1,18 @@
 <UserControl x:Class="AutoFlow.App.Views.Parts.RunControlPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svgc="http://sharpvectors.codeplex.com/svgc/">
     <Border Style="{StaticResource Card}">
-        <StackPanel>
-            <StackPanel Orientation="Horizontal">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal"
+                        VerticalAlignment="Center">
                 <TextBlock Margin="4,0,0,0"
+                           VerticalAlignment="Center"
                            Style="{StaticResource AppHeaderLine1}"
                            Text="运行控制" />
                 <TextBlock Margin="12,2,0,0"
@@ -27,49 +35,56 @@
                 </TextBlock>
             </StackPanel>
 
-            <StackPanel Margin="0,16,0,0"
-                        Orientation="Horizontal">
-                <Button Width="160"
-                        Margin="0,0,8,0"
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button Width="88"
+                        Margin="0,0,12,0"
                         Command="{Binding ToggleRunStateCommand}"
-                        Content="{Binding RunControlButtonText}">
+                        Content="{Binding RunControlButtonText}"
+                        ContentTemplate="{StaticResource AppButtonWithIconTemplate}">
                     <Button.Style>
                         <Style TargetType="Button"
-                               BasedOn="{StaticResource PrimaryButtonStyle}">
+                               BasedOn="{StaticResource AppButtonPrimaryStyle}">
+                            <Setter Property="Tag"
+                                    Value="{svgc:SvgImage Source=/Assets/Play.svg, AppName=AutoFlow.App}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsScriptRunning}"
                                              Value="True">
+                                    <Setter Property="Tag"
+                                            Value="{svgc:SvgImage Source=/Assets/Pause.svg, AppName=AutoFlow.App}" />
                                     <Setter Property="Background"
-                                            Value="{StaticResource AppDangerBrush}" />
+                                            Value="{StaticResource BrushPrimaryWarning}" />
                                     <Setter Property="BorderBrush"
-                                            Value="{StaticResource AppDangerBrush}" />
+                                            Value="{StaticResource BrushPrimaryWarning}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Width="160"
-                        Margin="0,0,8,0"
+                <Button Width="88"
+                        Margin="0,0,12,0"
+                        Content="录制"
+                        Tag="{svgc:SvgImage Source=/Assets/Record.svg, AppName=AutoFlow.App}"
+                        ContentTemplate="{StaticResource AppButtonWithIconTemplate}"
+                        Style="{StaticResource AppButtonDangerStyle}" />
+                <Button Width="88"
                         Command="{Binding ToggleMousePositionCommand}"
-                        Content="{Binding MousePositionToggleButtonText}">
+                        Content="{Binding MousePositionToggleButtonText}"
+                        ContentTemplate="{StaticResource AppButtonWithIconTemplate}">
                     <Button.Style>
                         <Style TargetType="Button"
-                               BasedOn="{StaticResource SecondaryButtonStyle}">
+                               BasedOn="{StaticResource AppButtonPlainStyle}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsMousePositionVisible}"
-                                             Value="True">
-                                    <Setter Property="Foreground"
-                                            Value="{StaticResource AppAccentActiveForeground}" />
-                                    <Setter Property="Background"
-                                            Value="{StaticResource AppAccentActiveBackground}" />
-                                    <Setter Property="BorderBrush"
-                                            Value="{StaticResource AppAccentActiveBorder}" />
+                                <DataTrigger Binding="{Binding IsMousePositionVisible}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource BrushPrimaryGreen}" />
+                                    <Setter Property="BorderBrush" Value="{StaticResource BrushPrimaryGreen}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
                 </Button>
             </StackPanel>
-        </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

@@ -19,7 +19,7 @@
                         VerticalAlignment="Center"
                         Command="{Binding OpenScriptsFolderCommand}"
                         Content="脚本目录"
-                        Style="{StaticResource AppTextActionButtonStyle}" />
+                        Style="{StaticResource AppTextButtonStyle}" />
             </Grid>
 
             <ListBox BorderThickness="0"

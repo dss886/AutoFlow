@@ -13,7 +13,7 @@
         Height="720"
         MinWidth="1080"
         MinHeight="720"
-        Background="{StaticResource AppBackgroundDark}"
+        Background="{StaticResource BrushBackgroundDark}"
         WindowStyle="None"
         WindowStartupLocation="Manual">
     <shell:WindowChrome.WindowChrome>
@@ -49,15 +49,27 @@
                     </StackPanel>
                 </Border>
                 
-                <Button Grid.Column="1"
-                        VerticalAlignment="Top"
-                        Command="{Binding CloseWindowCommand}"
-                        Style="{StaticResource AppTitleBarActionButtonStyle}">
-                    <Image Width="12"
-                           Height="12"
-                           IsHitTestVisible="False"
-                           Source="{svgc:SvgImage Source=/Assets/Close.svg, AppName=AutoFlow.App}" />
-                </Button>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Top">
+                    <Button Margin="0,0,8,0"
+                            Command="{Binding OpenSettingsCommand}"
+                            Style="{StaticResource AppIconButtonStyle}"
+                            ToolTip="设置">
+                        <Image Width="14"
+                               Height="14"
+                               IsHitTestVisible="False"
+                               Source="{svgc:SvgImage Source=/Assets/Settings.svg, AppName=AutoFlow.App}" />
+                    </Button>
+                    <Button Command="{Binding CloseWindowCommand}"
+                            Style="{StaticResource AppIconButtonStyle}"
+                            ToolTip="关闭">
+                        <Image Width="12"
+                               Height="12"
+                               IsHitTestVisible="False"
+                               Source="{svgc:SvgImage Source=/Assets/Close.svg, AppName=AutoFlow.App}" />
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <Grid Grid.Row="1"
