@@ -35,11 +35,15 @@ public sealed class ScriptRunnerService
         try
         {
             await _runtime.ExecuteAsync(script.FilePath, LogGeneratedMessage, _currentRunCts.Token);
-            LogGenerated?.Invoke($"脚本执行完成: {script.Name}");
-        }
-        catch (ScriptExecutionCanceledException)
-        {
-            LogGenerated?.Invoke($"脚本已停止: {script.Name}");
+
+            if (_currentRunCts.Token.IsCancellationRequested)
+            {
+                LogGenerated?.Invoke($"脚本已停止: {script.Name}");
+            }
+            else
+            {
+                LogGenerated?.Invoke($"脚本执行完成: {script.Name}");
+            }
         }
         catch (OperationCanceledException)
         {

@@ -2,14 +2,6 @@ using MoonSharp.Interpreter;
 
 namespace AutoFlow.App.Services;
 
-public sealed class ScriptExecutionCanceledException : Exception
-{
-    public ScriptExecutionCanceledException()
-        : base("脚本执行已停止。")
-    {
-    }
-}
-
 public sealed class LuaAutomationRuntime
 {
     private readonly AutomationInputService _inputService;
@@ -25,7 +17,14 @@ public sealed class LuaAutomationRuntime
         {
             var script = new Script(CoreModules.Preset_Complete);
             RegisterHostApi(script, log, cancellationToken);
-            script.DoFile(scriptPath);
+            try
+            {
+                script.DoFile(scriptPath);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // 停止脚本属于预期控制流，这里就地结束，避免调试时冒泡为“用户未处理异常”。
+            }
         }, cancellationToken);
     }
 
@@ -141,10 +140,7 @@ public sealed class LuaAutomationRuntime
 
     private static void ThrowIfCancellationRequested(CancellationToken cancellationToken)
     {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            throw new ScriptExecutionCanceledException();
-        }
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private static int RequireInt(CallbackArguments args, int index, string functionName)

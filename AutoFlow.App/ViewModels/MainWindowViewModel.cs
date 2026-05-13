@@ -57,7 +57,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _fileSystemWatcher.Deleted += FileSystemWatcher_OnChanged;
         _fileSystemWatcher.Renamed += FileSystemWatcher_OnChanged;
 
-        ToggleRunStateCommand = new AsyncRelayCommand(ToggleRunStateAsync);
+        ToggleRunStateCommand = new RelayCommand(ToggleRunState);
         OpenScriptsFolderCommand = new RelayCommand(OpenScriptsFolder);
         OpenScriptCommand = new RelayCommand<ScriptDefinition>(OpenScript);
         DeleteScriptCommand = new RelayCommand<ScriptDefinition>(DeleteScript);
@@ -194,7 +194,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _runnerService.Stop();
     }
 
-    private async Task ToggleRunStateAsync()
+    private void ToggleRunState()
     {
         if (IsScriptRunning)
         {
@@ -202,7 +202,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        await RunSelectedScriptAsync();
+        _ = RunSelectedScriptAsync();
     }
 
     private async Task RunSelectedScriptAsync()
