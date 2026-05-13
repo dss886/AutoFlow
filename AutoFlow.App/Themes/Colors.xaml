@@ -1,15 +1,14 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:styling="clr-namespace:AutoFlow.App.Styling">
-    <x:Static x:Key="BrushBackgroundDark" Member="styling:AppColorTokens.BrushBackgroundDark" />
-    <x:Static x:Key="BrushBackground" Member="styling:AppColorTokens.BrushBackground" />
-    <x:Static x:Key="BrushPrimaryGreen" Member="styling:AppColorTokens.BrushPrimaryGreen" />
-    <x:Static x:Key="BrushPrimaryDanger" Member="styling:AppColorTokens.BrushPrimaryDanger" />
-    <x:Static x:Key="BrushPrimaryWarning" Member="styling:AppColorTokens.BrushPrimaryWarning" />
-    <x:Static x:Key="BrushWhite" Member="styling:AppColorTokens.BrushWhite" />
-    <x:Static x:Key="BrushWhite87" Member="styling:AppColorTokens.BrushWhite87" />
-    <x:Static x:Key="BrushWhite54" Member="styling:AppColorTokens.BrushWhite54" />
-    <x:Static x:Key="BrushBlack" Member="styling:AppColorTokens.BrushBlack" />
-    <x:Static x:Key="BrushBlack87" Member="styling:AppColorTokens.BrushBlack87" />
-    <x:Static x:Key="BrushBlack54" Member="styling:AppColorTokens.BrushBlack54" />
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="BrushBackgroundDark" Color="#33333D" />
+    <SolidColorBrush x:Key="BrushBackground" Color="#42424C" />
+    <SolidColorBrush x:Key="BrushPrimaryGreen" Color="#1EB980" />
+    <SolidColorBrush x:Key="BrushPrimaryWarning" Color="#FFCF44" />
+    <SolidColorBrush x:Key="BrushPrimaryDanger" Color="#FF6859" />
+    <SolidColorBrush x:Key="BrushWhite" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BrushWhite87" Color="#DEFFFFFF" />
+    <SolidColorBrush x:Key="BrushWhite54" Color="#8AFFFFFF" />
+    <SolidColorBrush x:Key="BrushBlack" Color="#000000" />
+    <SolidColorBrush x:Key="BrushBlack87" Color="#DE000000" />
+    <SolidColorBrush x:Key="BrushBlack54" Color="#8A000000" />
 </ResourceDictionary>

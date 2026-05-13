@@ -3,37 +3,31 @@
     <Style x:Key="AppTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Normal" />
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="Opacity" Value="0.87" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite87}" />
     </Style>
 
     <Style x:Key="AppHeaderLine1" TargetType="TextBlock">
         <Setter Property="FontSize" Value="18" />
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="Opacity" Value="0.87" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite87}" />
     </Style>
 
     <Style x:Key="AppHeaderLine2" TargetType="TextBlock">
         <Setter Property="FontSize" Value="15" />
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="Opacity" Value="0.87" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite87}" />
     </Style>
 
     <Style x:Key="AppSubtitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="Opacity" Value="0.54" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite54}" />
     </Style>
 
     <Style x:Key="AppContent" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="Opacity" Value="0.54" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite54}" />
     </Style>
 
     <Style x:Key="AppTips" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="Opacity" Value="0.54" />
+        <Setter Property="Foreground" Value="{StaticResource BrushWhite54}" />
     </Style>
 </ResourceDictionary>

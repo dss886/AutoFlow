@@ -25,12 +25,12 @@
     <Style x:Key="AppListItemCardStyle" TargetType="Border">
         <Setter Property="Margin" Value="0,0,0,8" />
         <Setter Property="Padding" Value="12" />
-        <Setter Property="Background" Value="{DynamicResource BrushBackgroundDark}" />
+        <Setter Property="Background" Value="{StaticResource BrushBackgroundDark}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="6" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                <Setter Property="BorderBrush" Value="{DynamicResource BrushPrimaryGreen}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BrushPrimaryGreen}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>

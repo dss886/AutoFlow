@@ -9,7 +9,7 @@
                            Text="运行日志" />
             </DockPanel>
 
-            <Border Background="{DynamicResource BrushBackgroundDark}"
+            <Border Background="{StaticResource BrushBackgroundDark}"
                     CornerRadius="6">
                 <TextBox x:Name="LogOutputTextBox"
                          IsReadOnly="True"
