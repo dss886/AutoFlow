@@ -7,7 +7,7 @@
 - 扫描固定目录 `scripts/` 下的 Lua 脚本
 - 在 GUI 中查看脚本列表、运行状态和执行日志
 - 支持启动、停止、刷新脚本
-- 支持鼠标移动、鼠标点击、键盘按键、延迟和 Lua 循环
+- 支持鼠标移动、点击、按下/抬起，键盘按键、按下/抬起，屏幕坐标取色、延迟和 Lua 循环
 - 脚本文件使用系统默认外部编辑器打开
 
 ## 运行
@@ -26,13 +26,12 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 ## 脚本目录
 
 - 固定目录：项目根目录下的 `scripts/`
-- 示例脚本：`scripts/demo.lua`
+- 示例脚本：`scripts/demo.lua`、`scripts/demo2.lua`
 
 ## Lua API
 
 - `host.log(message)`
 - `host.sleep(milliseconds)`
-- `host.stop_requested()`
 - `mouse.move(x, y)`
 - `mouse.click(button)`
 - `mouse.down(button)`
@@ -40,6 +39,7 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 - `keyboard.press(keys)`
 - `keyboard.down(key)`
 - `keyboard.up(key)`
+- `screen.get_color(x, y)`
 
 ## 按键示例
 
@@ -53,6 +53,10 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 - `mouse.move(640, 360)`
 - `mouse.click("left")`
 - `mouse.click("right")`
+
+## 取色示例
+
+- `screen.get_color(640, 360)` 返回 `#RRGGBB`
 
 ## 注意事项
 

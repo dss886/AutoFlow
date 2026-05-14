@@ -1,21 +1,33 @@
--- @name: 演示脚本
--- @description: 每 500 毫秒移动鼠标，并发送一次 Ctrl+Shift+S 组合键
+-- @name: 按住与拖拽演示
+-- @description: 展示鼠标按下抬起、拖拽，以及键盘按下抬起组合
 
-host.log("演示脚本启动")
+local start_x = 680
+local start_y = 420
+local step = 35
+local steps = 4
 
-for i = 1, 3 do
-    host.log("第 " .. i .. " 轮开始")
-    mouse.move(400 + i * 40, 300)
-    host.sleep(500)
-    mouse.click("left")
-    host.sleep(500)
-    keyboard.press("Ctrl+Shift+S")
-    host.sleep(500)
+host.log("按住与拖拽演示开始")
+host.log("起点颜色: " .. screen.get_color(start_x, start_y))
 
-    if host.stop_requested() then
-        host.log("检测到停止请求，提前退出")
-        return
-    end
+mouse.move(start_x, start_y)
+host.sleep(300)
+
+host.log("按下左键并向右拖拽")
+mouse.down("left")
+
+for i = 1, steps do
+    mouse.move(start_x + i * step, start_y)
+    host.sleep(120)
 end
 
-host.log("演示脚本结束")
+mouse.up("left")
+host.sleep(250)
+
+host.log("按住 Shift 后发送字母 A")
+keyboard.down("Shift")
+host.sleep(120)
+keyboard.press("A")
+host.sleep(120)
+keyboard.up("Shift")
+
+host.log("按住与拖拽演示结束")

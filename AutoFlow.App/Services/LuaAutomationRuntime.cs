@@ -38,6 +38,7 @@ public sealed class LuaAutomationRuntime
         script.Globals["host"] = BuildHostTable(script, log, cancellationToken);
         script.Globals["mouse"] = BuildMouseTable(script, cancellationToken);
         script.Globals["keyboard"] = BuildKeyboardTable(script, cancellationToken);
+        script.Globals["screen"] = BuildScreenTable(script, cancellationToken);
     }
 
     private Table BuildHostTable(Script script, Action<string> log, CancellationToken cancellationToken)
@@ -66,11 +67,6 @@ public sealed class LuaAutomationRuntime
             }
 
             return DynValue.Nil;
-        });
-
-        table["stop_requested"] = DynValue.NewCallback((_, _) =>
-        {
-            return DynValue.NewBoolean(cancellationToken.IsCancellationRequested);
         });
 
         return table;
@@ -133,6 +129,20 @@ public sealed class LuaAutomationRuntime
             ThrowIfCancellationRequested(cancellationToken);
             _inputService.KeyUp(RequireString(args, 0, "keyboard.up"));
             return DynValue.Nil;
+        });
+
+        return table;
+    }
+
+    private Table BuildScreenTable(Script script, CancellationToken cancellationToken)
+    {
+        var table = new Table(script);
+        table["get_color"] = DynValue.NewCallback((_, args) =>
+        {
+            ThrowIfCancellationRequested(cancellationToken);
+            var x = RequireInt(args, 0, "screen.get_color");
+            var y = RequireInt(args, 1, "screen.get_color");
+            return DynValue.NewString(_inputService.GetScreenColorHex(x, y));
         });
 
         return table;

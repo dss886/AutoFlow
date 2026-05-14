@@ -1,21 +1,32 @@
--- @name: 演示脚本
--- @description: 每 500 毫秒移动鼠标，并发送一次 Ctrl+Shift+S 组合键
+-- @name: 颜色采样与基础输入
+-- @description: 读取屏幕坐标颜色，移动鼠标并点击，然后发送组合键
 
-host.log("演示脚本启动")
+local points = {
+    { x = 560, y = 320 },
+    { x = 640, y = 360 },
+    { x = 720, y = 400 },
+}
 
-for i = 1, 3 do
-    host.log("第 " .. i .. " 轮开始")
-    mouse.move(400 + i * 40, 300)
-    host.sleep(500)
-    mouse.click("left")
-    host.sleep(500)
-    keyboard.press("Ctrl+Shift+S")
-    host.sleep(500)
+host.log("颜色采样演示开始")
 
-    if host.stop_requested() then
-        host.log("检测到停止请求，提前退出")
-        return
-    end
+for i = 1, #points do
+    local point = points[i]
+    local color = screen.get_color(point.x, point.y)
+    host.log("采样点 " .. i .. " 坐标 (" .. point.x .. ", " .. point.y .. ") 颜色: " .. color)
+
+    mouse.move(point.x, point.y)
+    host.sleep(250)
 end
 
-host.log("演示脚本结束")
+local target = points[2]
+host.log("移动到目标点并执行左键点击")
+mouse.move(target.x, target.y)
+host.sleep(300)
+mouse.click("left")
+host.sleep(300)
+
+host.log("发送 Ctrl+Shift+S 组合键")
+keyboard.press("Ctrl+Shift+S")
+host.sleep(300)
+
+host.log("颜色采样演示结束")
