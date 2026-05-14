@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:AutoFlow.App.Views.Parts"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:views="clr-namespace:AutoFlow.App.Views.Parts"
@@ -95,5 +96,13 @@
                 </Grid>
             </Grid>
         </Grid>
+        <Popup x:Name="MousePositionPopup"
+               AllowsTransparency="True"
+               IsOpen="False"
+               Placement="AbsolutePoint"
+               PopupAnimation="Fade"
+               StaysOpen="True">
+            <controls:MousePositionOverlayPopup x:Name="MousePositionOverlayPopupControl" />
+        </Popup>
     </Grid>
 </Window>

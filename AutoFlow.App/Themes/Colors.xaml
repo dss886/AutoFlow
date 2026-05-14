@@ -8,6 +8,8 @@
     <SolidColorBrush x:Key="BrushWhite" Color="#FFFFFF" />
     <SolidColorBrush x:Key="BrushWhite87" Color="#DEFFFFFF" />
     <SolidColorBrush x:Key="BrushWhite54" Color="#8AFFFFFF" />
+    <SolidColorBrush x:Key="BrushWhite40" Color="#66FFFFFF" />
+    <SolidColorBrush x:Key="BrushGrey75" Color="#C033333D" />
     <SolidColorBrush x:Key="BrushBlack" Color="#000000" />
     <SolidColorBrush x:Key="BrushBlack87" Color="#DE000000" />
     <SolidColorBrush x:Key="BrushBlack54" Color="#8A000000" />

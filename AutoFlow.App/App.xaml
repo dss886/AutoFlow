@@ -11,6 +11,7 @@
                 <ResourceDictionary Source="Styles/Buttons.xaml" />
                 <ResourceDictionary Source="Styles/Menus.xaml" />
                 <ResourceDictionary Source="Styles/Lists.xaml" />
+                <ResourceDictionary Source="Styles/Overlays.xaml" />
                 <ResourceDictionary Source="Styles/ScrollBars.xaml" />
                 <ResourceDictionary Source="Templates/ScriptTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>

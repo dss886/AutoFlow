@@ -136,7 +136,8 @@
                    IsHitTestVisible="False"
                    Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag}" />
             <TextBlock VerticalAlignment="Center"
-                       Text="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Content}" />
+                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                       Text="{Binding}" />
         </StackPanel>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag}"

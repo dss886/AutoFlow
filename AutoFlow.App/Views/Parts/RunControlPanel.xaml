@@ -1,7 +1,10 @@
 <UserControl x:Class="AutoFlow.App.Views.Parts.RunControlPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:svgc="http://sharpvectors.codeplex.com/svgc/">
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+             mc:Ignorable="d">
     <Border Style="{StaticResource Card}">
         <Grid>
             <Grid.ColumnDefinitions>
@@ -9,31 +12,10 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal"
-                        VerticalAlignment="Center">
-                <TextBlock Margin="4,0,0,0"
-                           VerticalAlignment="Center"
-                           Style="{StaticResource AppHeaderLine1}"
-                           Text="运行控制" />
-                <TextBlock Margin="12,2,0,0"
-                           VerticalAlignment="Center"
-                           Text="{Binding MousePositionText}">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock"
-                               BasedOn="{StaticResource AppTips}">
-                            <Setter Property="Visibility"
-                                    Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsMousePositionVisible}"
-                                             Value="True">
-                                    <Setter Property="Visibility"
-                                            Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </StackPanel>
+            <TextBlock Margin="4,0,0,0"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource AppHeaderLine1}"
+                       Text="运行控制" />
 
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
@@ -41,7 +23,8 @@
                 <Button Width="88"
                         Margin="0,0,12,0"
                         Command="{Binding ToggleRunStateCommand}"
-                        Content="{Binding RunControlButtonText}"
+                        Content="{Binding RunControlButtonText, FallbackValue=运行, TargetNullValue=运行}"
+                        d:Content="运行"
                         ContentTemplate="{StaticResource AppButtonWithIconTemplate}">
                     <Button.Style>
                         <Style TargetType="Button"
@@ -69,14 +52,15 @@
                         ContentTemplate="{StaticResource AppButtonWithIconTemplate}"
                         Style="{StaticResource AppButtonDangerStyle}" />
                 <Button Width="88"
-                        Command="{Binding ToggleMousePositionCommand}"
-                        Content="{Binding MousePositionToggleButtonText}"
+                        Command="{Binding ToggleScreenToolCommand}"
+                        Content="{Binding ScreenToolButtonText, FallbackValue=屏幕工具, TargetNullValue=屏幕工具}"
+                        d:Content="屏幕工具"
                         ContentTemplate="{StaticResource AppButtonWithIconTemplate}">
                     <Button.Style>
                         <Style TargetType="Button"
                                BasedOn="{StaticResource AppButtonPlainStyle}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsMousePositionVisible}" Value="True">
+                                <DataTrigger Binding="{Binding IsScreenToolVisible}" Value="True">
                                     <Setter Property="Foreground" Value="{StaticResource BrushPrimaryGreen}" />
                                     <Setter Property="BorderBrush" Value="{StaticResource BrushPrimaryGreen}" />
                                 </DataTrigger>

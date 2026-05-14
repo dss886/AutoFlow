@@ -14,6 +14,7 @@ namespace AutoFlow.App.Services;
 
 internal static class TrayMenuStyle
 {
+    // 这里读取 Colors.xaml 中的颜色值比较绕且有性能损失，直接使用颜色值了
     public static readonly Color BackgroundDark = Color.FromArgb(0x33, 0x33, 0x3D);
     public static readonly Color Background = Color.FromArgb(0x42, 0x42, 0x4C);
     public static readonly Color Foreground = Color.White;

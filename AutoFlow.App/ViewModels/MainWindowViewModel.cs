@@ -24,8 +24,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly Queue<string> _logEntries = new();
     private ScriptDefinition? _selectedScript;
     private string _logOutput = string.Empty;
-    private string _mousePositionText = "鼠标位置: X 0, Y 0";
-    private bool _isMousePositionVisible;
+    private string _mousePositionText = "屏幕坐标: X 0, Y 0";
+    private bool _isScreenToolVisible;
     private bool _isDisposed;
 
     public MainWindowViewModel(Action closeWindow)
@@ -61,7 +61,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OpenScriptsFolderCommand = new RelayCommand(OpenScriptsFolder);
         OpenScriptCommand = new RelayCommand<ScriptDefinition>(OpenScript);
         DeleteScriptCommand = new RelayCommand<ScriptDefinition>(DeleteScript);
-        ToggleMousePositionCommand = new RelayCommand(ToggleMousePosition);
+        ToggleScreenToolCommand = new RelayCommand(ToggleScreenTool);
         OpenSettingsCommand = new RelayCommand(OpenSettings);
         CloseWindowCommand = new RelayCommand(_closeWindow);
 
@@ -108,19 +108,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string RunControlButtonText => IsScriptRunning ? "停止" : "运行";
 
-    public bool IsMousePositionVisible
+    public bool IsScreenToolVisible
     {
-        get => _isMousePositionVisible;
+        get => _isScreenToolVisible;
         private set
         {
-            if (_isMousePositionVisible == value)
+            if (_isScreenToolVisible == value)
             {
                 return;
             }
 
-            _isMousePositionVisible = value;
+            _isScreenToolVisible = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(MousePositionToggleButtonText));
+            OnPropertyChanged(nameof(ScreenToolButtonText));
         }
     }
 
@@ -139,7 +139,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string MousePositionToggleButtonText => "鼠标工具";
+    public string ScreenToolButtonText => "屏幕工具";
 
     public ICommand ToggleRunStateCommand { get; }
 
@@ -149,7 +149,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand DeleteScriptCommand { get; }
 
-    public ICommand ToggleMousePositionCommand { get; }
+    public ICommand ToggleScreenToolCommand { get; }
 
     public ICommand OpenSettingsCommand { get; }
 
@@ -167,7 +167,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void UpdateMousePosition(int x, int y)
     {
-        MousePositionText = $"鼠标位置: X {x}, Y {y}";
+        MousePositionText = $"屏幕坐标: X {x}, Y {y}";
     }
 
     public void AppendLogMessage(string message)
@@ -300,9 +300,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void ToggleMousePosition()
+    private void ToggleScreenTool()
     {
-        IsMousePositionVisible = !IsMousePositionVisible;
+        IsScreenToolVisible = !IsScreenToolVisible;
     }
 
     private void LoadScripts()
