@@ -53,7 +53,7 @@
                         Style="{StaticResource AppButtonDangerStyle}" />
                 <Button Width="88"
                         Command="{Binding ToggleScreenToolCommand}"
-                        Content="{Binding ScreenToolButtonText, FallbackValue=屏幕工具, TargetNullValue=屏幕工具}"
+                        Content="屏幕工具"
                         d:Content="屏幕工具"
                         ContentTemplate="{StaticResource AppButtonWithIconTemplate}">
                     <Button.Style>

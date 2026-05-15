@@ -6,7 +6,6 @@ local start_y = 420
 local step = 35
 local steps = 4
 
-host.log("按住与拖拽演示开始")
 host.log("起点颜色: " .. screen.get_color(start_x, start_y))
 
 mouse.move(start_x, start_y)
@@ -29,5 +28,3 @@ host.sleep(120)
 keyboard.press("A")
 host.sleep(120)
 keyboard.up("Shift")
-
-host.log("按住与拖拽演示结束")

@@ -7,8 +7,6 @@ local points = {
     { x = 720, y = 400 },
 }
 
-host.log("颜色采样演示开始")
-
 for i = 1, #points do
     local point = points[i]
     local color = screen.get_color(point.x, point.y)
@@ -28,5 +26,3 @@ host.sleep(300)
 host.log("发送 Ctrl+Shift+S 组合键")
 keyboard.press("Ctrl+Shift+S")
 host.sleep(300)
-
-host.log("颜色采样演示结束")

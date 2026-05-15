@@ -24,7 +24,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly Queue<string> _logEntries = new();
     private ScriptDefinition? _selectedScript;
     private string _logOutput = string.Empty;
-    private string _mousePositionText = "屏幕坐标: X 0, Y 0";
     private bool _isScreenToolVisible;
     private bool _isDisposed;
 
@@ -120,26 +119,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             _isScreenToolVisible = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ScreenToolButtonText));
         }
     }
-
-    public string MousePositionText
-    {
-        get => _mousePositionText;
-        private set
-        {
-            if (_mousePositionText == value)
-            {
-                return;
-            }
-
-            _mousePositionText = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string ScreenToolButtonText => "屏幕工具";
 
     public ICommand ToggleRunStateCommand { get; }
 
@@ -163,11 +144,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             ToggleRunStateCommand.Execute(null);
         }
-    }
-
-    public void UpdateMousePosition(int x, int y)
-    {
-        MousePositionText = $"屏幕坐标: X {x}, Y {y}";
     }
 
     public void AppendLogMessage(string message)
@@ -303,6 +279,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void ToggleScreenTool()
     {
         IsScreenToolVisible = !IsScreenToolVisible;
+        AppendLog(IsScreenToolVisible ? "屏幕工具已启动。" : "屏幕工具已关闭。");
     }
 
     private void LoadScripts()

@@ -1,0 +1,48 @@
+<UserControl x:Class="AutoFlow.App.Views.Parts.ScreenToolPopup"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False"
+             IsHitTestVisible="False">
+    <Grid>
+        <Popup x:Name="PopupRoot"
+               AllowsTransparency="True"
+               IsOpen="False"
+               Placement="AbsolutePoint"
+               PopupAnimation="Fade"
+               StaysOpen="True">
+            <Border x:Name="PopupContentRoot"
+                    Style="{StaticResource AppOverlayCard}">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock x:Name="CoordinateTextBlock"
+                               HorizontalAlignment="Center"
+                               Style="{StaticResource AppOverlayTitle}"
+                               Text="(0, 0)"
+                               TextAlignment="Center" />
+                    <StackPanel Margin="0,4,0,0"
+                                HorizontalAlignment="Center"
+                                Orientation="Horizontal">
+                        <Border x:Name="ColorPreviewBorder"
+                                Margin="0,0,8,0"
+                                Style="{StaticResource AppOverlayColorSwatch}" />
+                        <TextBlock x:Name="ColorTextBlock"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource AppOverlayTitle}"
+                                   Text="#FFFFFF"
+                                   TextAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Margin="0,8,0,0"
+                               HorizontalAlignment="Center"
+                               Style="{StaticResource AppOverlayContent}"
+                               Text="按 R 记录当前坐标和屏幕颜色"
+                               TextAlignment="Center" />
+                    <TextBlock Margin="0,4,0,0"
+                               HorizontalAlignment="Center"
+                               Style="{StaticResource AppOverlayContent}"
+                               Text="按 Shift 切换 RGB/Hex"
+                               TextAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

@@ -96,13 +96,7 @@
                 </Grid>
             </Grid>
         </Grid>
-        <Popup x:Name="MousePositionPopup"
-               AllowsTransparency="True"
-               IsOpen="False"
-               Placement="AbsolutePoint"
-               PopupAnimation="Fade"
-               StaysOpen="True">
-            <controls:MousePositionOverlayPopup x:Name="MousePositionOverlayPopupControl" />
-        </Popup>
+        <controls:ScreenToolPopup x:Name="ScreenToolPopupControl"
+                                  IsToolVisible="{Binding IsScreenToolVisible}" />
     </Grid>
 </Window>

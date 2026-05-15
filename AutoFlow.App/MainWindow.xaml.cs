@@ -3,41 +3,36 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Threading;
-using System.Windows.Forms;
 using AutoFlow.App.Services;
 using AutoFlow.App.ViewModels;
-using MediaColor = System.Windows.Media.Color;
-using DrawingPoint = System.Drawing.Point;
-using WpfPoint = System.Windows.Point;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace AutoFlow.App;
 
 public partial class MainWindow : Window
 {
+    private const int HcAction = 0;
+    private const int WhKeyboardLl = 13;
     private const int WhMouseLl = 14;
+    private const int WmKeyDown = 0x0100;
+    private const int WmKeyUp = 0x0101;
+    private const int WmSysKeyDown = 0x0104;
+    private const int WmSysKeyUp = 0x0105;
     private const int WmMouseMove = 0x0200;
     private const int WmXButtonDown = 0x020B;
     private const int WmXButtonUp = 0x020C;
+    private const uint VkR = 0x52;
+    private const uint VkLShift = 0xA0;
+    private const uint VkRShift = 0xA1;
     private const ushort XButton1 = 0x0001;
-    private const double MousePopupOffsetX = 18;
-    private const double MousePopupOffsetY = 20;
-    private const double MousePopupPadding = 8;
-    private const int MouseHookFallbackDelayMs = 150;
 
-    private readonly LowLevelMouseProc _mouseHookProc;
-    private readonly DispatcherTimer _mouseHookFallbackTimer;
-    private readonly DispatcherTimer _mousePositionPollTimer;
+    private readonly HookProc _keyboardHookProc;
+    private readonly HookProc _mouseHookProc;
     private bool _allowExit;
-    private bool _hasObservedMousePosition;
-    private bool _isMousePollFallbackActive;
-    private bool _isMousePositionUpdateQueued;
+    private bool _isScreenToolRecordKeyPressed;
+    private bool _isScreenToolShiftKeyPressed;
     private bool _isToggleMouseButtonPressed;
-    private int _observedMouseX;
-    private int _observedMouseY;
-    private int _latestMouseX;
-    private int _latestMouseY;
+    private IntPtr _keyboardHookHandle;
     private IntPtr _mouseHookHandle;
 
     public MainWindow()
@@ -47,39 +42,16 @@ public partial class MainWindow : Window
         ViewModel = new MainWindowViewModel(Close);
         Style = (Style)FindResource(typeof(Window));
         SourceInitialized += MainWindow_OnSourceInitialized;
-        IsVisibleChanged += MainWindow_OnIsVisibleChanged;
         DataContext = ViewModel;
-        ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;
 
+        _keyboardHookProc = KeyboardHookCallback;
         _mouseHookProc = MouseHookCallback;
-        _mouseHookFallbackTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(MouseHookFallbackDelayMs),
-        };
-        _mouseHookFallbackTimer.Tick += MouseHookFallbackTimer_OnTick;
-        _mousePositionPollTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(16),
-        };
-        _mousePositionPollTimer.Tick += MousePositionPollTimer_OnTick;
     }
 
     public MainWindowViewModel ViewModel { get; }
 
     [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool GetCursorPos(out NativePoint lpPoint);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDc);
-
-    [DllImport("gdi32.dll")]
-    private static extern uint GetPixel(IntPtr hDc, int x, int y);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+    private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -91,14 +63,7 @@ public partial class MainWindow : Window
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
-    private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativePoint
-    {
-        public int X;
-        public int Y;
-    }
+    private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct MouseHookData
@@ -106,6 +71,16 @@ public partial class MainWindow : Window
         public int X;
         public int Y;
         public uint MouseData;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KeyboardHookData
+    {
+        public uint VkCode;
+        public uint ScanCode;
         public uint Flags;
         public uint Time;
         public IntPtr ExtraInfo;
@@ -122,18 +97,14 @@ public partial class MainWindow : Window
     private void MainWindow_OnSourceInitialized(object? sender, EventArgs e)
     {
         WindowPlacementService.Apply(this);
+        InstallKeyboardHook();
         InstallMouseHook();
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        StopMouseTrackingTimers();
-        _mouseHookFallbackTimer.Tick -= MouseHookFallbackTimer_OnTick;
-        _mousePositionPollTimer.Stop();
-        _mousePositionPollTimer.Tick -= MousePositionPollTimer_OnTick;
+        RemoveKeyboardHook();
         RemoveMouseHook();
-        IsVisibleChanged -= MainWindow_OnIsVisibleChanged;
-        ViewModel.PropertyChanged -= ViewModel_OnPropertyChanged;
         ViewModel.Dispose();
         base.OnClosed(e);
     }
@@ -143,14 +114,63 @@ public partial class MainWindow : Window
         if (!_allowExit)
         {
             e.Cancel = true;
-            StopMouseTrackingTimers();
-            MousePositionPopup.IsOpen = false;
             Hide();
             return;
         }
 
         WindowPlacementService.Save(this);
         base.OnClosing(e);
+    }
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        if (TryHandleScreenToolShortcut(e.Key, isKeyDown: true))
+        {
+            e.Handled = true;
+        }
+
+        base.OnPreviewKeyDown(e);
+    }
+
+    protected override void OnPreviewKeyUp(KeyEventArgs e)
+    {
+        if (ViewModel.IsScreenToolVisible)
+        {
+            ReleaseScreenToolShortcutState(e.Key);
+        }
+
+        base.OnPreviewKeyUp(e);
+    }
+
+    private void InstallKeyboardHook()
+    {
+        if (_keyboardHookHandle != IntPtr.Zero)
+        {
+            return;
+        }
+
+        var moduleName = Process.GetCurrentProcess().MainModule?.ModuleName;
+        var moduleHandle = GetModuleHandle(moduleName);
+        _keyboardHookHandle = SetWindowsHookEx(WhKeyboardLl, _keyboardHookProc, moduleHandle, 0);
+        if (_keyboardHookHandle != IntPtr.Zero)
+        {
+            ViewModel.AppendLogMessage("已启用屏幕工具全局快捷键监听。");
+            return;
+        }
+
+        var errorCode = Marshal.GetLastWin32Error();
+        ViewModel.AppendLogMessage($"屏幕工具全局快捷键监听启用失败，错误代码: {errorCode}");
+    }
+
+    private void RemoveKeyboardHook()
+    {
+        if (_keyboardHookHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        UnhookWindowsHookEx(_keyboardHookHandle);
+        _keyboardHookHandle = IntPtr.Zero;
     }
 
     private void InstallMouseHook()
@@ -173,23 +193,6 @@ public partial class MainWindow : Window
         ViewModel.AppendLogMessage($"鼠标后退键监听启用失败，错误代码: {errorCode}");
     }
 
-    private void UpdateMousePosition()
-    {
-        if (!GetCursorPos(out var point))
-        {
-            return;
-        }
-
-        UpdateMousePosition(point.X, point.Y);
-    }
-
-    private void UpdateMousePosition(int x, int y)
-    {
-        RememberObservedMousePosition(x, y);
-        ViewModel.UpdateMousePosition(x, y);
-        UpdateMousePositionPopup(x, y, GetScreenColor(x, y));
-    }
-
     private void RemoveMouseHook()
     {
         if (_mouseHookHandle == IntPtr.Zero)
@@ -199,6 +202,43 @@ public partial class MainWindow : Window
 
         UnhookWindowsHookEx(_mouseHookHandle);
         _mouseHookHandle = IntPtr.Zero;
+    }
+
+    private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode != HcAction)
+        {
+            return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
+        }
+
+        var message = wParam.ToInt32();
+        var keyboardData = Marshal.PtrToStructure<KeyboardHookData>(lParam);
+        var isKeyDown = message is WmKeyDown or WmSysKeyDown;
+        var isKeyUp = message is WmKeyUp or WmSysKeyUp;
+
+        if (!isKeyDown && !isKeyUp)
+        {
+            return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
+        }
+
+        if (!ViewModel.IsScreenToolVisible)
+        {
+            ReleaseScreenToolShortcutState(keyboardData.VkCode);
+
+            return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
+        }
+
+        if (TryHandleScreenToolShortcut(keyboardData.VkCode, isKeyDown))
+        {
+            return new IntPtr(1);
+        }
+
+        if (isKeyUp)
+        {
+            ReleaseScreenToolShortcutState(keyboardData.VkCode);
+        }
+
+        return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
     }
 
     private IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -214,7 +254,7 @@ public partial class MainWindow : Window
 
         if (message == WmMouseMove)
         {
-            OnMouseHookMove(mouseData.X, mouseData.Y);
+            ScreenToolPopupControl.OnGlobalMouseMove(mouseData.X, mouseData.Y);
         }
 
         if (sideButton == XButton1)
@@ -233,213 +273,105 @@ public partial class MainWindow : Window
         return CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
     }
 
-    private void ViewModel_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private bool TryHandleScreenToolShortcut(Key key, bool isKeyDown)
     {
-        if (e.PropertyName != nameof(MainWindowViewModel.IsScreenToolVisible))
+        if (!ViewModel.IsScreenToolVisible)
         {
-            return;
+            return false;
         }
 
-        SyncMousePositionTracking();
+        return key switch
+        {
+            Key.R => HandleScreenToolRecordShortcut(isKeyDown),
+            Key.LeftShift or Key.RightShift => HandleScreenToolShiftShortcut(isKeyDown),
+            _ => false,
+        };
+    }
+
+    private bool TryHandleScreenToolShortcut(uint virtualKey, bool isKeyDown)
+    {
+        return virtualKey switch
+        {
+            VkR => HandleScreenToolRecordShortcut(isKeyDown),
+            VkLShift or VkRShift => HandleScreenToolShiftShortcut(isKeyDown),
+            _ => false,
+        };
+    }
+
+    private bool HandleScreenToolRecordShortcut(bool isKeyDown)
+    {
+        if (!isKeyDown)
+        {
+            _isScreenToolRecordKeyPressed = false;
+            return true;
+        }
+
+        if (_isScreenToolRecordKeyPressed)
+        {
+            return true;
+        }
+
+        _isScreenToolRecordKeyPressed = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+            ViewModel.AppendLogMessage(ScreenToolPopupControl.CreateCurrentReadingLogMessage())));
+        return true;
+    }
+
+    private bool HandleScreenToolShiftShortcut(bool isKeyDown)
+    {
+        if (!isKeyDown)
+        {
+            _isScreenToolShiftKeyPressed = false;
+            return true;
+        }
+
+        if (_isScreenToolShiftKeyPressed)
+        {
+            return true;
+        }
+
+        _isScreenToolShiftKeyPressed = true;
+        Dispatcher.BeginInvoke(new Action(ScreenToolPopupControl.ToggleColorDisplayFormat));
+        return true;
+    }
+
+    private void ReleaseScreenToolShortcutState(Key key)
+    {
+        switch (key)
+        {
+            case Key.R:
+                _isScreenToolRecordKeyPressed = false;
+                break;
+            case Key.LeftShift:
+            case Key.RightShift:
+                _isScreenToolShiftKeyPressed = false;
+                break;
+        }
+    }
+
+    private void ReleaseScreenToolShortcutState(uint virtualKey)
+    {
+        switch (virtualKey)
+        {
+            case VkR:
+                _isScreenToolRecordKeyPressed = false;
+                break;
+            case VkLShift:
+            case VkRShift:
+                _isScreenToolShiftKeyPressed = false;
+                break;
+        }
+    }
+
+    private void ResetScreenToolShortcutState()
+    {
+        _isScreenToolRecordKeyPressed = false;
+        _isScreenToolShiftKeyPressed = false;
     }
 
     public void PrepareForExit()
     {
+        ResetScreenToolShortcutState();
         _allowExit = true;
-    }
-
-    private void SyncMousePositionTracking()
-    {
-        if (ViewModel.IsScreenToolVisible && IsVisible)
-        {
-            MousePositionPopup.IsOpen = true;
-            _mouseHookFallbackTimer.Start();
-            UpdateMousePosition();
-            return;
-        }
-
-        StopMouseTrackingTimers();
-        MousePositionPopup.IsOpen = false;
-    }
-
-    private void MainWindow_OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-        SyncMousePositionTracking();
-    }
-
-    private static MediaColor GetScreenColor(int x, int y)
-    {
-        var desktopDc = GetDC(IntPtr.Zero);
-        if (desktopDc == IntPtr.Zero)
-        {
-            return Colors.White;
-        }
-
-        try
-        {
-            var pixel = GetPixel(desktopDc, x, y);
-            if (pixel == 0xFFFFFFFF)
-            {
-                return Colors.White;
-            }
-
-            var red = (byte)(pixel & 0x000000FF);
-            var green = (byte)((pixel & 0x0000FF00) >> 8);
-            var blue = (byte)((pixel & 0x00FF0000) >> 16);
-            return MediaColor.FromRgb(red, green, blue);
-        }
-        finally
-        {
-            ReleaseDC(IntPtr.Zero, desktopDc);
-        }
-    }
-
-    private void UpdateMousePositionPopup(int x, int y, MediaColor color)
-    {
-        if (!MousePositionPopup.IsOpen)
-        {
-            return;
-        }
-
-        MousePositionOverlayPopupControl.UpdateContent(x, y, color);
-        MousePositionOverlayPopupControl.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-        MousePositionOverlayPopupControl.UpdateLayout();
-
-        var popupSize = MousePositionOverlayPopupControl.DesiredSize;
-        var cursorPosition = TransformFromDevicePixels(x, y);
-        var workArea = Screen.FromPoint(new DrawingPoint(x, y)).WorkingArea;
-        var workAreaTopLeft = TransformFromDevicePixels(workArea.Left, workArea.Top);
-        var workAreaBottomRight = TransformFromDevicePixels(workArea.Right, workArea.Bottom);
-        var popupLeft = Clamp(cursorPosition.X + MousePopupOffsetX, workAreaTopLeft.X + MousePopupPadding, workAreaBottomRight.X - popupSize.Width - MousePopupPadding);
-        var popupTop = Clamp(cursorPosition.Y + MousePopupOffsetY, workAreaTopLeft.Y + MousePopupPadding, workAreaBottomRight.Y - popupSize.Height - MousePopupPadding);
-
-        MousePositionPopup.HorizontalOffset = popupLeft;
-        MousePositionPopup.VerticalOffset = popupTop;
-    }
-
-    private WpfPoint TransformFromDevicePixels(double x, double y)
-    {
-        var source = PresentationSource.FromVisual(this);
-        if (source?.CompositionTarget is null)
-        {
-            return new WpfPoint(x, y);
-        }
-
-        return source.CompositionTarget.TransformFromDevice.Transform(new WpfPoint(x, y));
-    }
-
-    private static double Clamp(double value, double min, double max)
-    {
-        if (min > max)
-        {
-            return min;
-        }
-
-        return Math.Min(Math.Max(value, min), max);
-    }
-
-    private void QueueMousePositionUpdate(int x, int y)
-    {
-        _latestMouseX = x;
-        _latestMouseY = y;
-
-        if (_isMousePositionUpdateQueued)
-        {
-            return;
-        }
-
-        _isMousePositionUpdateQueued = true;
-        Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(FlushQueuedMousePositionUpdate));
-    }
-
-    private void FlushQueuedMousePositionUpdate()
-    {
-        _isMousePositionUpdateQueued = false;
-
-        if (!ViewModel.IsScreenToolVisible || !IsVisible)
-        {
-            return;
-        }
-
-        UpdateMousePosition(_latestMouseX, _latestMouseY);
-    }
-
-    private void MousePositionPollTimer_OnTick(object? sender, EventArgs e)
-    {
-        if (!ViewModel.IsScreenToolVisible || !IsVisible)
-        {
-            return;
-        }
-
-        UpdateMousePosition();
-    }
-
-    private void MouseHookFallbackTimer_OnTick(object? sender, EventArgs e)
-    {
-        if (!ViewModel.IsScreenToolVisible || !IsVisible)
-        {
-            return;
-        }
-
-        if (!GetCursorPos(out var point))
-        {
-            return;
-        }
-
-        if (!_hasObservedMousePosition)
-        {
-            RememberObservedMousePosition(point.X, point.Y);
-            return;
-        }
-
-        var hasMouseMoved = point.X != _observedMouseX || point.Y != _observedMouseY;
-        if (!hasMouseMoved)
-        {
-            if (_isMousePollFallbackActive)
-            {
-                _isMousePollFallbackActive = false;
-                _mousePositionPollTimer.Stop();
-            }
-
-            return;
-        }
-
-        if (!_isMousePollFallbackActive)
-        {
-            _isMousePollFallbackActive = true;
-            _mousePositionPollTimer.Start();
-            UpdateMousePosition(point.X, point.Y);
-        }
-    }
-
-    private void OnMouseHookMove(int x, int y)
-    {
-        RememberObservedMousePosition(x, y);
-
-        if (_isMousePollFallbackActive)
-        {
-            _isMousePollFallbackActive = false;
-            _mousePositionPollTimer.Stop();
-        }
-
-        if (ViewModel.IsScreenToolVisible && IsVisible)
-        {
-            QueueMousePositionUpdate(x, y);
-        }
-    }
-
-    private void StopMouseTrackingTimers()
-    {
-        _hasObservedMousePosition = false;
-        _isMousePollFallbackActive = false;
-        _mouseHookFallbackTimer.Stop();
-        _mousePositionPollTimer.Stop();
-    }
-
-    private void RememberObservedMousePosition(int x, int y)
-    {
-        _hasObservedMousePosition = true;
-        _observedMouseX = x;
-        _observedMouseY = y;
     }
 }
