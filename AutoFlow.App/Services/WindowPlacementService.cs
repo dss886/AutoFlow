@@ -1,7 +1,5 @@
 using System.Drawing;
-using System.IO;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
@@ -11,7 +9,6 @@ namespace AutoFlow.App.Services;
 
 public static class WindowPlacementService
 {
-    private const string PlacementFileName = "window-placement.json";
     private const int MinimumVisibleWidth = 100;
     private const int MinimumVisibleHeight = 60;
     private const uint SwpNoZOrder = 0x0004;
@@ -54,22 +51,12 @@ public static class WindowPlacementService
                 return;
             }
 
-            var placement = new WindowPlacement(
+            var placement = new LocalWindowPlacement(
                 bounds.Left,
                 bounds.Top,
                 bounds.Width,
                 bounds.Height);
-
-            var configDirectory = PathService.ResolveAppDataDirectory();
-            PathService.EnsureDirectory(configDirectory);
-
-            var placementFilePath = Path.Combine(configDirectory, PlacementFileName);
-            var json = JsonSerializer.Serialize(placement, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-            });
-
-            File.WriteAllText(placementFilePath, json);
+            LocalSettingsService.SaveWindowPlacement(placement);
         }
         catch
         {
@@ -81,17 +68,7 @@ public static class WindowPlacementService
     {
         try
         {
-            var placementFilePath = Path.Combine(
-                PathService.ResolveAppDataDirectory(),
-                PlacementFileName);
-
-            if (!File.Exists(placementFilePath))
-            {
-                return null;
-            }
-
-            var json = File.ReadAllText(placementFilePath);
-            var placement = JsonSerializer.Deserialize<WindowPlacement>(json);
+            var placement = LocalSettingsService.LoadWindowPlacement();
             if (placement is null)
             {
                 return null;
@@ -229,6 +206,4 @@ public static class WindowPlacementService
         public PointNative ptMaxPosition;
         public RectNative rcNormalPosition;
     }
-
-    private sealed record WindowPlacement(int Left, int Top, int Width, int Height);
 }

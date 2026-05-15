@@ -32,7 +32,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private int _observedMouseX;
     private int _observedMouseY;
     private MediaColor _currentColor = Colors.White;
-    private readonly ScreenToolColorDisplayFormat _defaultColorDisplayFormat = ScreenToolSettingsService.LoadColorDisplayFormat();
+    private readonly ScreenToolColorDisplayFormat _defaultColorDisplayFormat = LocalSettingsService.LoadScreenToolColorDisplayFormat();
     private ScreenToolColorDisplayFormat _colorDisplayFormat;
 
     public ScreenToolPopup()
@@ -207,7 +207,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
             ? ScreenToolColorDisplayFormat.Rgb
             : ScreenToolColorDisplayFormat.Hex;
 
-        ScreenToolSettingsService.SaveColorDisplayFormat(_colorDisplayFormat);
+        LocalSettingsService.SaveScreenToolColorDisplayFormat(_colorDisplayFormat);
         RefreshContent();
     }
 
