@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using AutoFlow.App.Models;
 using AutoFlow.App.Services;
 using AutoFlow.App.ViewModels;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -12,7 +13,13 @@ namespace AutoFlow.App;
 public partial class MainWindow : Window
 {
     private const int WhMouseLl = 14;
+    private const int WmMButtonDown = 0x0207;
+    private const int WmMButtonUp = 0x0208;
     private const int WmMouseMove = 0x0200;
+    private const int WmXButtonDown = 0x020B;
+    private const int WmXButtonUp = 0x020C;
+    private const ushort XButton1 = 0x0001;
+    private const ushort XButton2 = 0x0002;
 
     private readonly GlobalHotkeyService _hotkeyService;
     private readonly HookProc _mouseHookProc;
@@ -161,10 +168,25 @@ public partial class MainWindow : Window
 
         var message = wParam.ToInt32();
         var mouseData = Marshal.PtrToStructure<MouseHookData>(lParam);
+        var mouseButton = ResolveShortcutMouseButton(message, mouseData.MouseData);
 
         if (message == WmMouseMove)
         {
             ScreenToolPopupControl.OnGlobalMouseMove(mouseData.X, mouseData.Y);
+        }
+
+        if (message is WmMButtonDown or WmXButtonDown
+            && mouseButton != ShortcutMouseButton.None
+            && _hotkeyService.HandleGlobalMouseButtonDown(mouseButton))
+        {
+            return new IntPtr(1);
+        }
+
+        if (message is WmMButtonUp or WmXButtonUp
+            && mouseButton != ShortcutMouseButton.None
+            && _hotkeyService.HandleGlobalMouseButtonUp(mouseButton))
+        {
+            return new IntPtr(1);
         }
 
         return CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
@@ -202,5 +224,20 @@ public partial class MainWindow : Window
     {
         _hotkeyService.CleanupAllRegistrations();
         _windowControlService.PrepareForExit();
+    }
+
+    private static ShortcutMouseButton ResolveShortcutMouseButton(int message, uint mouseData)
+    {
+        return message switch
+        {
+            WmMButtonDown or WmMButtonUp => ShortcutMouseButton.Middle,
+            WmXButtonDown or WmXButtonUp => (ushort)(mouseData >> 16) switch
+            {
+                XButton1 => ShortcutMouseButton.XButton1,
+                XButton2 => ShortcutMouseButton.XButton2,
+                _ => ShortcutMouseButton.None,
+            },
+            _ => ShortcutMouseButton.None,
+        };
     }
 }

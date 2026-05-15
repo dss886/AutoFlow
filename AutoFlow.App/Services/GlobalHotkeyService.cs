@@ -101,6 +101,16 @@ public sealed class GlobalHotkeyService : IDisposable
         }
     }
 
+    public bool HandleGlobalMouseButtonDown(ShortcutMouseButton mouseButton)
+    {
+        return TryHandleConfiguredHotkeys(mouseButton, GetCurrentModifiers());
+    }
+
+    public bool HandleGlobalMouseButtonUp(ShortcutMouseButton mouseButton)
+    {
+        return ReleaseConfiguredHotkeyStates(mouseButton);
+    }
+
     public void SetScreenToolShortcutsEnabled(bool enabled)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
@@ -294,6 +304,14 @@ public sealed class GlobalHotkeyService : IDisposable
             || TryHandleConfiguredHotkey(_hotkeySettings.ScreenTool, key, modifiers, ref _isScreenToolHotkeyPressed, ScreenToolToggleRequested);
     }
 
+    private bool TryHandleConfiguredHotkeys(ShortcutMouseButton mouseButton, ModifierKeys modifiers)
+    {
+        return TryHandleConfiguredHotkey(_hotkeySettings.Run, mouseButton, modifiers, ref _isRunHotkeyPressed, RunRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.Stop, mouseButton, modifiers, ref _isStopHotkeyPressed, StopRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.Record, mouseButton, modifiers, ref _isRecordHotkeyPressed, RecordRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.ScreenTool, mouseButton, modifiers, ref _isScreenToolHotkeyPressed, ScreenToolToggleRequested);
+    }
+
     private bool TryHandleConfiguredHotkey(
         ShortcutGesture gesture,
         Key key,
@@ -302,6 +320,28 @@ public sealed class GlobalHotkeyService : IDisposable
         Action? callback)
     {
         if (!IsConfiguredHotkeyMatch(gesture, key, modifiers))
+        {
+            return false;
+        }
+
+        if (pressedState)
+        {
+            return true;
+        }
+
+        pressedState = true;
+        Dispatch(callback);
+        return true;
+    }
+
+    private bool TryHandleConfiguredHotkey(
+        ShortcutGesture gesture,
+        ShortcutMouseButton mouseButton,
+        ModifierKeys modifiers,
+        ref bool pressedState,
+        Action? callback)
+    {
+        if (!IsConfiguredHotkeyMatch(gesture, mouseButton, modifiers))
         {
             return false;
         }
@@ -372,6 +412,16 @@ public sealed class GlobalHotkeyService : IDisposable
         return released;
     }
 
+    private bool ReleaseConfiguredHotkeyStates(ShortcutMouseButton mouseButton)
+    {
+        var released = false;
+        released |= ReleaseConfiguredHotkeyState(mouseButton, _hotkeySettings.Run, ref _isRunHotkeyPressed);
+        released |= ReleaseConfiguredHotkeyState(mouseButton, _hotkeySettings.Stop, ref _isStopHotkeyPressed);
+        released |= ReleaseConfiguredHotkeyState(mouseButton, _hotkeySettings.Record, ref _isRecordHotkeyPressed);
+        released |= ReleaseConfiguredHotkeyState(mouseButton, _hotkeySettings.ScreenTool, ref _isScreenToolHotkeyPressed);
+        return released;
+    }
+
     private static bool ReleaseConfiguredHotkeyState(Key key, ShortcutGesture gesture, ref bool pressedState)
     {
         if (!pressedState || gesture.IsEmpty)
@@ -380,6 +430,22 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         if (NormalizeKey(gesture.Key) == key || IsMatchingModifierKeyRelease(key, gesture.Modifiers))
+        {
+            pressedState = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool ReleaseConfiguredHotkeyState(ShortcutMouseButton mouseButton, ShortcutGesture gesture, ref bool pressedState)
+    {
+        if (!pressedState || !gesture.IsMouse)
+        {
+            return false;
+        }
+
+        if (gesture.MouseButton == mouseButton)
         {
             pressedState = false;
             return true;
@@ -431,12 +497,23 @@ public sealed class GlobalHotkeyService : IDisposable
 
     private static bool IsConfiguredHotkeyMatch(ShortcutGesture gesture, Key key, ModifierKeys modifiers)
     {
-        if (gesture.IsEmpty)
+        if (!gesture.IsKeyboard)
         {
             return false;
         }
 
         return NormalizeKey(gesture.Key) == key
+            && NormalizeModifiers(gesture.Modifiers) == NormalizeModifiers(modifiers);
+    }
+
+    private static bool IsConfiguredHotkeyMatch(ShortcutGesture gesture, ShortcutMouseButton mouseButton, ModifierKeys modifiers)
+    {
+        if (!gesture.IsMouse)
+        {
+            return false;
+        }
+
+        return gesture.MouseButton == mouseButton
             && NormalizeModifiers(gesture.Modifiers) == NormalizeModifiers(modifiers);
     }
 

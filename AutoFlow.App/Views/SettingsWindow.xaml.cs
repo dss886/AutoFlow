@@ -81,6 +81,23 @@ public partial class SettingsWindow : Window
         SetCapturingItem(null);
     }
 
+    private void Window_OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_capturingItem is null)
+        {
+            return;
+        }
+
+        if (!TryConvertMouseButton(e.ChangedButton, out var mouseButton))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _ = TryApplyShortcut(_capturingItem, ShortcutGesture.FromMouseGesture(mouseButton, Keyboard.Modifiers));
+        SetCapturingItem(null);
+    }
+
     private static ObservableCollection<ShortcutBindingItem> CreateBindings(AppHotkeySettings hotkeySettings)
     {
         var defaults = AppHotkeySettings.CreateDefault();
@@ -156,6 +173,19 @@ public partial class SettingsWindow : Window
     private static Key NormalizeKey(KeyEventArgs e)
     {
         return e.Key == Key.System ? e.SystemKey : e.Key;
+    }
+
+    private static bool TryConvertMouseButton(MouseButton mouseButton, out ShortcutMouseButton shortcutMouseButton)
+    {
+        shortcutMouseButton = mouseButton switch
+        {
+            MouseButton.Middle => ShortcutMouseButton.Middle,
+            MouseButton.XButton1 => ShortcutMouseButton.XButton1,
+            MouseButton.XButton2 => ShortcutMouseButton.XButton2,
+            _ => ShortcutMouseButton.None,
+        };
+
+        return shortcutMouseButton != ShortcutMouseButton.None;
     }
 
     public sealed class ShortcutBindingItem : INotifyPropertyChanged
