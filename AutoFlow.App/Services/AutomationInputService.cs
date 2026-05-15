@@ -17,29 +17,7 @@ public sealed class AutomationInputService
 
     public string GetScreenColorHex(int x, int y)
     {
-        var desktopDc = GetDC(IntPtr.Zero);
-        if (desktopDc == IntPtr.Zero)
-        {
-            throw new InvalidOperationException("读取屏幕颜色失败。");
-        }
-
-        try
-        {
-            var pixel = GetPixel(desktopDc, x, y);
-            if (pixel == 0xFFFFFFFF)
-            {
-                throw new InvalidOperationException("读取屏幕颜色失败。");
-            }
-
-            var red = (byte)(pixel & 0x000000FF);
-            var green = (byte)((pixel & 0x0000FF00) >> 8);
-            var blue = (byte)((pixel & 0x00FF0000) >> 16);
-            return $"#{red:X2}{green:X2}{blue:X2}";
-        }
-        finally
-        {
-            ReleaseDC(IntPtr.Zero, desktopDc);
-        }
+        return ScreenColorService.GetScreenColorHex(x, y);
     }
 
     public void MouseDown(string button)
@@ -266,15 +244,6 @@ public sealed class AutomationInputService
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetCursorPos(int x, int y);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDc);
-
-    [DllImport("gdi32.dll")]
-    private static extern uint GetPixel(IntPtr hDc, int x, int y);
 
     private enum InputType : uint
     {

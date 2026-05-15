@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+          manifestVersion="1.0"
+          xmlns:asmv2="urn:schemas-microsoft-com:asm.v2"
+          xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
   <assemblyIdentity version="1.0.0.0" name="AutoFlow.App.app" />
-  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
-    <security>
-      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
-      </requestedPrivileges>
-    </security>
-  </trustInfo>
+  <asmv2:trustInfo>
+    <asmv2:security>
+      <asmv3:requestedPrivileges>
+        <asmv3:requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+      </asmv3:requestedPrivileges>
+    </asmv2:security>
+  </asmv2:trustInfo>
+  <asmv3:application>
+    <asmv3:windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2,PerMonitor</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">True/PM</dpiAware>
+    </asmv3:windowsSettings>
+  </asmv3:application>
 </assembly>

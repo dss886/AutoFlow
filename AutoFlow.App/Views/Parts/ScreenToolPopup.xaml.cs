@@ -74,15 +74,6 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetCursorPos(out NativePoint lpPoint);
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDc);
-
-    [DllImport("gdi32.dll")]
-    private static extern uint GetPixel(IntPtr hDc, int x, int y);
-
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint
     {
@@ -237,7 +228,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     private static string FormatHexColor(MediaColor color)
     {
-        return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        return ScreenColorService.FormatHexColor(color);
     }
 
     private static string FormatRgbColor(MediaColor color)
@@ -247,29 +238,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     private static MediaColor GetScreenColor(int x, int y)
     {
-        var desktopDc = GetDC(IntPtr.Zero);
-        if (desktopDc == IntPtr.Zero)
-        {
-            return Colors.White;
-        }
-
-        try
-        {
-            var pixel = GetPixel(desktopDc, x, y);
-            if (pixel == 0xFFFFFFFF)
-            {
-                return Colors.White;
-            }
-
-            var red = (byte)(pixel & 0x000000FF);
-            var green = (byte)((pixel & 0x0000FF00) >> 8);
-            var blue = (byte)((pixel & 0x00FF0000) >> 16);
-            return MediaColor.FromRgb(red, green, blue);
-        }
-        finally
-        {
-            ReleaseDC(IntPtr.Zero, desktopDc);
-        }
+        return ScreenColorService.GetScreenColorOrDefault(x, y, Colors.White);
     }
 
     private void UpdatePopupPosition(int x, int y)
