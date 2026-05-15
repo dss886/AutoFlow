@@ -17,6 +17,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private const int MaxLogLineCount = 3000;
 
     private readonly Action _closeWindow;
+    private readonly Action _openSettings;
     private readonly ScriptCatalogService _catalogService;
     private readonly ScriptRunnerService _runnerService;
     private readonly FileSystemWatcher _fileSystemWatcher;
@@ -27,9 +28,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isScreenToolVisible;
     private bool _isDisposed;
 
-    public MainWindowViewModel(Action closeWindow)
+    public MainWindowViewModel(Action closeWindow, Action openSettings)
     {
         _closeWindow = closeWindow ?? throw new ArgumentNullException(nameof(closeWindow));
+        _openSettings = openSettings ?? throw new ArgumentNullException(nameof(openSettings));
 
         ScriptsDirectory = PathService.ResolveScriptsDirectory();
         PathService.EnsureDirectory(ScriptsDirectory);
@@ -60,6 +62,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OpenScriptsFolderCommand = new RelayCommand(OpenScriptsFolder);
         OpenScriptCommand = new RelayCommand<ScriptDefinition>(OpenScript);
         DeleteScriptCommand = new RelayCommand<ScriptDefinition>(DeleteScript);
+        RecordCommand = new RelayCommand(Record);
         ToggleScreenToolCommand = new RelayCommand(ToggleScreenTool);
         OpenSettingsCommand = new RelayCommand(OpenSettings);
         CloseWindowCommand = new RelayCommand(_closeWindow);
@@ -130,6 +133,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand DeleteScriptCommand { get; }
 
+    public ICommand RecordCommand { get; }
+
     public ICommand ToggleScreenToolCommand { get; }
 
     public ICommand OpenSettingsCommand { get; }
@@ -138,11 +143,35 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public void ExecuteToggleRunStateCommand()
+    public void ExecuteRunCommand()
     {
-        if (ToggleRunStateCommand.CanExecute(null))
+        if (!IsScriptRunning)
         {
-            ToggleRunStateCommand.Execute(null);
+            _ = RunSelectedScriptAsync();
+        }
+    }
+
+    public void ExecuteStopCommand()
+    {
+        if (IsScriptRunning)
+        {
+            _runnerService.Stop();
+        }
+    }
+
+    public void ExecuteRecordCommand()
+    {
+        if (RecordCommand.CanExecute(null))
+        {
+            RecordCommand.Execute(null);
+        }
+    }
+
+    public void ExecuteToggleScreenToolCommand()
+    {
+        if (ToggleScreenToolCommand.CanExecute(null))
+        {
+            ToggleScreenToolCommand.Execute(null);
         }
     }
 
@@ -184,9 +213,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _ = RunSelectedScriptAsync();
     }
 
-    private static void OpenSettings()
+    private void OpenSettings()
     {
-        System.Windows.MessageBox.Show("设置面板尚未实现。", "设置", MessageBoxButton.OK, MessageBoxImage.Information);
+        _openSettings();
     }
 
     private async Task RunSelectedScriptAsync()
@@ -280,6 +309,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         IsScreenToolVisible = !IsScreenToolVisible;
         AppendLog(IsScreenToolVisible ? "屏幕工具已启动。" : "屏幕工具已关闭。");
+    }
+
+    private void Record()
+    {
+        AppendLog("录制功能尚未实现。");
     }
 
     private void LoadScripts()

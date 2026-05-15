@@ -15,6 +15,7 @@
         MinWidth="1080"
         MinHeight="720"
         Background="{StaticResource BrushBackgroundDark}"
+        ResizeMode="NoResize"
         WindowStyle="None"
         WindowStartupLocation="Manual">
     <shell:WindowChrome.WindowChrome>

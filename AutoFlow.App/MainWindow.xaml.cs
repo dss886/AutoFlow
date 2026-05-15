@@ -11,40 +11,32 @@ namespace AutoFlow.App;
 
 public partial class MainWindow : Window
 {
-    private const int HcAction = 0;
-    private const int WhKeyboardLl = 13;
     private const int WhMouseLl = 14;
-    private const int WmKeyDown = 0x0100;
-    private const int WmKeyUp = 0x0101;
-    private const int WmSysKeyDown = 0x0104;
-    private const int WmSysKeyUp = 0x0105;
     private const int WmMouseMove = 0x0200;
-    private const int WmXButtonDown = 0x020B;
-    private const int WmXButtonUp = 0x020C;
-    private const uint VkR = 0x52;
-    private const uint VkLShift = 0xA0;
-    private const uint VkRShift = 0xA1;
-    private const ushort XButton1 = 0x0001;
 
-    private readonly HookProc _keyboardHookProc;
+    private readonly GlobalHotkeyService _hotkeyService;
     private readonly HookProc _mouseHookProc;
-    private bool _allowExit;
-    private bool _isScreenToolRecordKeyPressed;
-    private bool _isScreenToolShiftKeyPressed;
-    private bool _isToggleMouseButtonPressed;
-    private IntPtr _keyboardHookHandle;
+    private readonly WindowControlService _windowControlService;
     private IntPtr _mouseHookHandle;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        ViewModel = new MainWindowViewModel(Close);
+        ViewModel = new MainWindowViewModel(Close, OpenSettingsWindow);
         Style = (Style)FindResource(typeof(Window));
         SourceInitialized += MainWindow_OnSourceInitialized;
         DataContext = ViewModel;
+        _windowControlService = new WindowControlService(this, OnHotkeysChanged);
 
-        _keyboardHookProc = KeyboardHookCallback;
+        _hotkeyService = new GlobalHotkeyService(ViewModel.AppendLogMessage);
+        _hotkeyService.RunRequested += ViewModel.ExecuteRunCommand;
+        _hotkeyService.StopRequested += ViewModel.ExecuteStopCommand;
+        _hotkeyService.RecordRequested += ViewModel.ExecuteRecordCommand;
+        _hotkeyService.ScreenToolToggleRequested += ViewModel.ExecuteToggleScreenToolCommand;
+        _hotkeyService.ScreenToolRecordRequested += HandleScreenToolRecordRequested;
+        _hotkeyService.ScreenToolColorDisplayToggleRequested += HandleScreenToolColorDisplayToggleRequested;
+        ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;
         _mouseHookProc = MouseHookCallback;
     }
 
@@ -76,16 +68,6 @@ public partial class MainWindow : Window
         public IntPtr ExtraInfo;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct KeyboardHookData
-    {
-        public uint VkCode;
-        public uint ScanCode;
-        public uint Flags;
-        public uint Time;
-        public IntPtr ExtraInfo;
-    }
-
     private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed)
@@ -96,14 +78,16 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnSourceInitialized(object? sender, EventArgs e)
     {
-        WindowPlacementService.Apply(this);
-        InstallKeyboardHook();
+        _windowControlService.ApplyStartupPlacement();
+        _hotkeyService.Initialize(this);
+        _hotkeyService.SetScreenToolShortcutsEnabled(ViewModel.IsScreenToolVisible);
         InstallMouseHook();
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        RemoveKeyboardHook();
+        ViewModel.PropertyChanged -= ViewModel_OnPropertyChanged;
+        _hotkeyService.Dispose();
         RemoveMouseHook();
         ViewModel.Dispose();
         base.OnClosed(e);
@@ -111,20 +95,18 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(CancelEventArgs e)
     {
-        if (!_allowExit)
+        if (_windowControlService.HandleMainWindowClosing())
         {
             e.Cancel = true;
-            Hide();
             return;
         }
 
-        WindowPlacementService.Save(this);
         base.OnClosing(e);
     }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        if (TryHandleScreenToolShortcut(e.Key, isKeyDown: true))
+        if (_hotkeyService.HandlePreviewKeyDown(e.Key))
         {
             e.Handled = true;
         }
@@ -134,43 +116,9 @@ public partial class MainWindow : Window
 
     protected override void OnPreviewKeyUp(KeyEventArgs e)
     {
-        if (ViewModel.IsScreenToolVisible)
-        {
-            ReleaseScreenToolShortcutState(e.Key);
-        }
+        _hotkeyService.HandlePreviewKeyUp(e.Key);
 
         base.OnPreviewKeyUp(e);
-    }
-
-    private void InstallKeyboardHook()
-    {
-        if (_keyboardHookHandle != IntPtr.Zero)
-        {
-            return;
-        }
-
-        var moduleName = Process.GetCurrentProcess().MainModule?.ModuleName;
-        var moduleHandle = GetModuleHandle(moduleName);
-        _keyboardHookHandle = SetWindowsHookEx(WhKeyboardLl, _keyboardHookProc, moduleHandle, 0);
-        if (_keyboardHookHandle != IntPtr.Zero)
-        {
-            ViewModel.AppendLogMessage("已启用屏幕工具全局快捷键监听。");
-            return;
-        }
-
-        var errorCode = Marshal.GetLastWin32Error();
-        ViewModel.AppendLogMessage($"屏幕工具全局快捷键监听启用失败，错误代码: {errorCode}");
-    }
-
-    private void RemoveKeyboardHook()
-    {
-        if (_keyboardHookHandle == IntPtr.Zero)
-        {
-            return;
-        }
-
-        UnhookWindowsHookEx(_keyboardHookHandle);
-        _keyboardHookHandle = IntPtr.Zero;
     }
 
     private void InstallMouseHook()
@@ -185,12 +133,12 @@ public partial class MainWindow : Window
         _mouseHookHandle = SetWindowsHookEx(WhMouseLl, _mouseHookProc, moduleHandle, 0);
         if (_mouseHookHandle != IntPtr.Zero)
         {
-            ViewModel.AppendLogMessage("已启用鼠标后退键监听。");
+            ViewModel.AppendLogMessage("已启用全局鼠标位置监听。");
             return;
         }
 
         var errorCode = Marshal.GetLastWin32Error();
-        ViewModel.AppendLogMessage($"鼠标后退键监听启用失败，错误代码: {errorCode}");
+        ViewModel.AppendLogMessage($"全局鼠标位置监听启用失败，错误代码: {errorCode}");
     }
 
     private void RemoveMouseHook()
@@ -204,43 +152,6 @@ public partial class MainWindow : Window
         _mouseHookHandle = IntPtr.Zero;
     }
 
-    private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
-    {
-        if (nCode != HcAction)
-        {
-            return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
-        }
-
-        var message = wParam.ToInt32();
-        var keyboardData = Marshal.PtrToStructure<KeyboardHookData>(lParam);
-        var isKeyDown = message is WmKeyDown or WmSysKeyDown;
-        var isKeyUp = message is WmKeyUp or WmSysKeyUp;
-
-        if (!isKeyDown && !isKeyUp)
-        {
-            return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
-        }
-
-        if (!ViewModel.IsScreenToolVisible)
-        {
-            ReleaseScreenToolShortcutState(keyboardData.VkCode);
-
-            return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
-        }
-
-        if (TryHandleScreenToolShortcut(keyboardData.VkCode, isKeyDown))
-        {
-            return new IntPtr(1);
-        }
-
-        if (isKeyUp)
-        {
-            ReleaseScreenToolShortcutState(keyboardData.VkCode);
-        }
-
-        return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
-    }
-
     private IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode < 0)
@@ -250,128 +161,46 @@ public partial class MainWindow : Window
 
         var message = wParam.ToInt32();
         var mouseData = Marshal.PtrToStructure<MouseHookData>(lParam);
-        var sideButton = (ushort)(mouseData.MouseData >> 16);
 
         if (message == WmMouseMove)
         {
             ScreenToolPopupControl.OnGlobalMouseMove(mouseData.X, mouseData.Y);
         }
 
-        if (sideButton == XButton1)
-        {
-            if (message == WmXButtonDown && !_isToggleMouseButtonPressed)
-            {
-                _isToggleMouseButtonPressed = true;
-                Dispatcher.BeginInvoke(new Action(ViewModel.ExecuteToggleRunStateCommand));
-            }
-            else if (message == WmXButtonUp)
-            {
-                _isToggleMouseButtonPressed = false;
-            }
-        }
-
         return CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
     }
 
-    private bool TryHandleScreenToolShortcut(Key key, bool isKeyDown)
+    private void OpenSettingsWindow()
     {
-        if (!ViewModel.IsScreenToolVisible)
-        {
-            return false;
-        }
-
-        return key switch
-        {
-            Key.R => HandleScreenToolRecordShortcut(isKeyDown),
-            Key.LeftShift or Key.RightShift => HandleScreenToolShiftShortcut(isKeyDown),
-            _ => false,
-        };
+        _windowControlService.ToggleSettingsWindow();
     }
 
-    private bool TryHandleScreenToolShortcut(uint virtualKey, bool isKeyDown)
+    private void OnHotkeysChanged()
     {
-        return virtualKey switch
-        {
-            VkR => HandleScreenToolRecordShortcut(isKeyDown),
-            VkLShift or VkRShift => HandleScreenToolShiftShortcut(isKeyDown),
-            _ => false,
-        };
+        _hotkeyService.ReloadConfiguredHotkeys(showFailureMessage: true);
     }
 
-    private bool HandleScreenToolRecordShortcut(bool isKeyDown)
+    private void ViewModel_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (!isKeyDown)
+        if (e.PropertyName == nameof(MainWindowViewModel.IsScreenToolVisible))
         {
-            _isScreenToolRecordKeyPressed = false;
-            return true;
-        }
-
-        if (_isScreenToolRecordKeyPressed)
-        {
-            return true;
-        }
-
-        _isScreenToolRecordKeyPressed = true;
-        Dispatcher.BeginInvoke(new Action(() =>
-            ViewModel.AppendLogMessage(ScreenToolPopupControl.CreateCurrentReadingLogMessage())));
-        return true;
-    }
-
-    private bool HandleScreenToolShiftShortcut(bool isKeyDown)
-    {
-        if (!isKeyDown)
-        {
-            _isScreenToolShiftKeyPressed = false;
-            return true;
-        }
-
-        if (_isScreenToolShiftKeyPressed)
-        {
-            return true;
-        }
-
-        _isScreenToolShiftKeyPressed = true;
-        Dispatcher.BeginInvoke(new Action(ScreenToolPopupControl.ToggleColorDisplayFormat));
-        return true;
-    }
-
-    private void ReleaseScreenToolShortcutState(Key key)
-    {
-        switch (key)
-        {
-            case Key.R:
-                _isScreenToolRecordKeyPressed = false;
-                break;
-            case Key.LeftShift:
-            case Key.RightShift:
-                _isScreenToolShiftKeyPressed = false;
-                break;
+            _hotkeyService.SetScreenToolShortcutsEnabled(ViewModel.IsScreenToolVisible);
         }
     }
 
-    private void ReleaseScreenToolShortcutState(uint virtualKey)
+    private void HandleScreenToolRecordRequested()
     {
-        switch (virtualKey)
-        {
-            case VkR:
-                _isScreenToolRecordKeyPressed = false;
-                break;
-            case VkLShift:
-            case VkRShift:
-                _isScreenToolShiftKeyPressed = false;
-                break;
-        }
+        ViewModel.AppendLogMessage(ScreenToolPopupControl.CreateCurrentReadingLogMessage());
     }
 
-    private void ResetScreenToolShortcutState()
+    private void HandleScreenToolColorDisplayToggleRequested()
     {
-        _isScreenToolRecordKeyPressed = false;
-        _isScreenToolShiftKeyPressed = false;
+        ScreenToolPopupControl.ToggleColorDisplayFormat();
     }
 
     public void PrepareForExit()
     {
-        ResetScreenToolShortcutState();
-        _allowExit = true;
+        _hotkeyService.CleanupAllRegistrations();
+        _windowControlService.PrepareForExit();
     }
 }

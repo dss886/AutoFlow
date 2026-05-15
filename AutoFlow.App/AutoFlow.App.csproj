@@ -20,12 +20,14 @@
     <None Remove="Assets\Close.svg" />
     <None Remove="Assets\Pause.svg" />
     <None Remove="Assets\Play.svg" />
+    <None Remove="Assets\Refresh.svg" />
     <None Remove="Assets\Record.svg" />
     <None Remove="Assets\Settings.svg" />
     <Resource Include="Assets\AppIcon.png" />
     <Resource Include="Assets\Close.svg" />
     <Resource Include="Assets\Pause.svg" />
     <Resource Include="Assets\Play.svg" />
+    <Resource Include="Assets\Refresh.svg" />
     <Resource Include="Assets\Record.svg" />
     <Resource Include="Assets\Settings.svg" />
   </ItemGroup>

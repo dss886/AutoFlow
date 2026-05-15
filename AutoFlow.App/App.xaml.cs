@@ -41,6 +41,11 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (MainWindow is MainWindow window)
+        {
+            window.PrepareForExit();
+        }
+
         _trayIconService?.Dispose();
         _trayIconService = null;
 

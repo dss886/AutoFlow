@@ -4,17 +4,153 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media;
+using AutoFlow.App.Views;
+using Point = System.Windows.Point;
 
 namespace AutoFlow.App.Services;
 
-public static class WindowPlacementService
+public sealed class WindowControlService
 {
     private const int MinimumVisibleWidth = 100;
     private const int MinimumVisibleHeight = 60;
     private const uint SwpNoZOrder = 0x0004;
     private const uint SwpNoActivate = 0x0010;
+    private const double SettingsWindowGap = 16;
 
-    public static void Apply(Window window)
+    private readonly Window _mainWindow;
+    private readonly Action _hotkeysChanged;
+    private bool _allowExit;
+    private bool _isSettingsWindowOnLeft;
+    private SettingsWindow? _settingsWindow;
+
+    public WindowControlService(Window mainWindow, Action hotkeysChanged)
+    {
+        _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
+        _hotkeysChanged = hotkeysChanged ?? throw new ArgumentNullException(nameof(hotkeysChanged));
+
+        _mainWindow.LocationChanged += (_, _) => UpdateSettingsWindowBounds();
+        _mainWindow.SizeChanged += (_, _) => UpdateSettingsWindowBounds();
+    }
+
+    public void ApplyStartupPlacement()
+    {
+        Apply(_mainWindow);
+    }
+
+    public bool HandleMainWindowClosing()
+    {
+        Save(_mainWindow);
+
+        if (_allowExit)
+        {
+            CloseSettingsWindow();
+            return false;
+        }
+
+        CloseSettingsWindow();
+        _mainWindow.Hide();
+        return true;
+    }
+
+    public void ToggleSettingsWindow()
+    {
+        if (_settingsWindow is { IsVisible: true })
+        {
+            CloseSettingsWindow();
+            return;
+        }
+
+        if (_settingsWindow is { IsLoaded: true })
+        {
+            UpdateSettingsWindowBounds();
+            _settingsWindow.Show();
+            _settingsWindow.Activate();
+            return;
+        }
+
+        _settingsWindow = new SettingsWindow(_hotkeysChanged)
+        {
+            Owner = _mainWindow,
+        };
+        _settingsWindow.Closed += SettingsWindow_OnClosed;
+
+        _isSettingsWindowOnLeft = ShouldOpenSettingsWindowOnLeft(_settingsWindow.Width);
+        UpdateSettingsWindowBounds();
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
+    }
+
+    public void PrepareForExit()
+    {
+        _allowExit = true;
+    }
+
+    private void CloseSettingsWindow()
+    {
+        if (_settingsWindow is null)
+        {
+            return;
+        }
+
+        _settingsWindow.Closed -= SettingsWindow_OnClosed;
+        _settingsWindow.Close();
+        _settingsWindow = null;
+    }
+
+    private void SettingsWindow_OnClosed(object? sender, EventArgs e)
+    {
+        if (_settingsWindow is not null)
+        {
+            _settingsWindow.Closed -= SettingsWindow_OnClosed;
+            _settingsWindow = null;
+        }
+    }
+
+    private void UpdateSettingsWindowBounds()
+    {
+        if (_settingsWindow is null)
+        {
+            return;
+        }
+
+        var settingsWidth = _settingsWindow.Width;
+
+        _settingsWindow.Height = _mainWindow.ActualHeight;
+        _settingsWindow.Top = _mainWindow.Top;
+        _settingsWindow.Left = _isSettingsWindowOnLeft
+            ? _mainWindow.Left - settingsWidth - SettingsWindowGap
+            : _mainWindow.Left + _mainWindow.ActualWidth + SettingsWindowGap;
+    }
+
+    private bool ShouldOpenSettingsWindowOnLeft(double settingsWidth)
+    {
+        var handle = new WindowInteropHelper(_mainWindow).Handle;
+        var screen = Screen.FromHandle(handle);
+        var workingArea = screen.WorkingArea;
+        var source = PresentationSource.FromVisual(_mainWindow);
+        if (source?.CompositionTarget is null)
+        {
+            var fallbackWorkingArea = new Rect(
+                SystemParameters.WorkArea.Left,
+                SystemParameters.WorkArea.Top,
+                SystemParameters.WorkArea.Width,
+                SystemParameters.WorkArea.Height);
+            var fallbackPreferredRight = _mainWindow.Left + _mainWindow.ActualWidth + SettingsWindowGap;
+            return fallbackPreferredRight + settingsWidth > fallbackWorkingArea.Right
+                && _mainWindow.Left - settingsWidth - SettingsWindowGap >= fallbackWorkingArea.Left;
+        }
+
+        var transform = source.CompositionTarget.TransformFromDevice;
+        var topLeft = transform.Transform(new Point(workingArea.Left, workingArea.Top));
+        var bottomRight = transform.Transform(new Point(workingArea.Right, workingArea.Bottom));
+        var preferredRight = _mainWindow.Left + _mainWindow.ActualWidth + SettingsWindowGap;
+        var preferredLeft = _mainWindow.Left - settingsWidth - SettingsWindowGap;
+        var workingAreaDip = new Rect(topLeft, bottomRight);
+        return preferredRight + settingsWidth > workingAreaDip.Right
+            && preferredLeft >= workingAreaDip.Left;
+    }
+
+    private static void Apply(Window window)
     {
         var handle = new WindowInteropHelper(window).Handle;
         if (handle == IntPtr.Zero)
@@ -35,7 +171,7 @@ public static class WindowPlacementService
             SwpNoZOrder | SwpNoActivate);
     }
 
-    public static void Save(Window window)
+    private static void Save(Window window)
     {
         try
         {

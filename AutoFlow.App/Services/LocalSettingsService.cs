@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using AutoFlow.App.Models;
 
 namespace AutoFlow.App.Services;
 
@@ -66,6 +67,47 @@ public static class LocalSettingsService
         }
     }
 
+    public static AppHotkeySettings LoadHotkeySettings()
+    {
+        var defaults = AppHotkeySettings.CreateDefault();
+
+        try
+        {
+            var settings = LoadSettings();
+            return new AppHotkeySettings
+            {
+                Run = ShortcutGesture.ParseOrDefault(settings.Hotkeys?.Run, defaults.Run),
+                Stop = ShortcutGesture.ParseOrDefault(settings.Hotkeys?.Stop, defaults.Stop),
+                Record = ShortcutGesture.ParseOrDefault(settings.Hotkeys?.Record, defaults.Record),
+                ScreenTool = ShortcutGesture.ParseOrDefault(settings.Hotkeys?.ScreenTool, defaults.ScreenTool),
+            };
+        }
+        catch
+        {
+            return defaults;
+        }
+    }
+
+    public static void SaveHotkeySettings(AppHotkeySettings hotkeySettings)
+    {
+        ArgumentNullException.ThrowIfNull(hotkeySettings);
+
+        try
+        {
+            var settings = LoadSettings();
+            settings.Hotkeys ??= new HotkeySettings();
+            settings.Hotkeys.Run = hotkeySettings.Run.Serialize();
+            settings.Hotkeys.Stop = hotkeySettings.Stop.Serialize();
+            settings.Hotkeys.Record = hotkeySettings.Record.Serialize();
+            settings.Hotkeys.ScreenTool = hotkeySettings.ScreenTool.Serialize();
+            SaveSettings(settings);
+        }
+        catch
+        {
+            // Keep hotkey customization usable even when local settings cannot be written.
+        }
+    }
+
     private static LocalSettings LoadSettings()
     {
         var settingsFilePath = GetSettingsFilePath();
@@ -95,11 +137,24 @@ public static class LocalSettingsService
         public ScreenToolSettings? ScreenTool { get; set; }
 
         public LocalWindowPlacement? WindowPlacement { get; set; }
+
+        public HotkeySettings? Hotkeys { get; set; }
     }
 
     private sealed class ScreenToolSettings
     {
         public ScreenToolColorDisplayFormat? ColorDisplayFormat { get; set; }
+    }
+
+    private sealed class HotkeySettings
+    {
+        public string? Run { get; set; }
+
+        public string? Stop { get; set; }
+
+        public string? Record { get; set; }
+
+        public string? ScreenTool { get; set; }
     }
 }
 
