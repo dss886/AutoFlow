@@ -10,7 +10,7 @@
             </DockPanel>
 
             <Border Background="{StaticResource BrushBackgroundDark}"
-                    CornerRadius="6">
+                    CornerRadius="8">
                 <RichTextBox x:Name="LogOutputTextBox"
                              Padding="6"
                              Background="Transparent"

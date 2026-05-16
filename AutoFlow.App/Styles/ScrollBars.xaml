@@ -7,7 +7,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
                     <Border Background="{StaticResource BrushBackgroundDark}"
-                            CornerRadius="5" />
+                            CornerRadius="4" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -27,7 +27,7 @@
     </Style>
 
     <Style x:Key="AppScrollBarStyle" TargetType="ScrollBar">
-        <Setter Property="Width" Value="10" />
+        <Setter Property="Width" Value="8" />
         <Setter Property="Margin" Value="10,0,0,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Template">
@@ -70,7 +70,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
                     <Border Background="{StaticResource BrushBackground}"
-                            CornerRadius="5" />
+                            CornerRadius="4" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -79,7 +79,7 @@
     <Style x:Key="LogOutputScrollBarStyle"
            TargetType="ScrollBar"
            BasedOn="{StaticResource AppScrollBarStyle}">
-        <Setter Property="Width" Value="10" />
+        <Setter Property="Width" Value="8" />
         <Setter Property="Margin" Value="0,4,0,4" />
         <Setter Property="Template">
             <Setter.Value>

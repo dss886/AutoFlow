@@ -13,7 +13,7 @@ public static class AppMenuTokens
 
     public static float TrayFontSize => 10F;
 
-    public static int ContextMenuCornerRadiusValue => 12;
+    public static int ContextMenuCornerRadiusValue => 16;
 
     public static int MenuItemCornerRadiusValue => 8;
 
