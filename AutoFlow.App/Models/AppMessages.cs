@@ -30,4 +30,6 @@ public readonly record struct KeyboardInputObservedMessage(Key Key, bool IsKeyDo
 
 public readonly record struct MouseMovedMessage(int X, int Y);
 
+public readonly record struct KeyBindingModeChangedMessage(bool IsBinding);
+
 public readonly record struct MouseButtonObservedMessage(string Button, bool IsButtonDown, int X, int Y);

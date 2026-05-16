@@ -31,9 +31,11 @@ public sealed class GlobalHotkeyService : IDisposable
     private readonly HookProc _mainKeyboardHookProc;
     private readonly HookProc _screenToolKeyboardHookProc;
     private readonly IDisposable _hotkeysReloadSubscription;
+    private readonly IDisposable _keyBindingModeSubscription;
     private AppHotkeySettings _hotkeySettings = AppHotkeySettings.CreateDefault();
     private bool _isDisposed;
     private bool _isScreenToolShortcutsEnabled;
+    private bool _isBindingMode;
     private bool _isRunHotkeyPressed;
     private bool _isStopHotkeyPressed;
     private bool _isRecordHotkeyPressed;
@@ -52,6 +54,7 @@ public sealed class GlobalHotkeyService : IDisposable
         _mainKeyboardHookProc = MainKeyboardHookCallback;
         _screenToolKeyboardHookProc = ScreenToolKeyboardHookCallback;
         _hotkeysReloadSubscription = _eventBus.Subscribe<HotkeysReloadRequestedMessage>(_ => ReloadConfiguredHotkeys());
+        _keyBindingModeSubscription = _eventBus.Subscribe<KeyBindingModeChangedMessage>(msg => _isBindingMode = msg.IsBinding);
     }
 
     public void Initialize(Window owner)
@@ -93,11 +96,18 @@ public sealed class GlobalHotkeyService : IDisposable
 
     public bool HandleGlobalMouseButtonDown(ShortcutMouseButton mouseButton)
     {
+        if (_isBindingMode) return false;
         return TryHandleConfiguredHotkeys(mouseButton, GetCurrentModifiers());
     }
 
     public bool HandleGlobalMouseButtonUp(ShortcutMouseButton mouseButton)
     {
+        if (_isBindingMode)
+        {
+            ReleaseConfiguredHotkeyStates(mouseButton);
+            return true;
+        }
+
         return ReleaseConfiguredHotkeyStates(mouseButton);
     }
 
@@ -139,6 +149,7 @@ public sealed class GlobalHotkeyService : IDisposable
         _isDisposed = true;
         CleanupAllRegistrations();
         _hotkeysReloadSubscription.Dispose();
+        _keyBindingModeSubscription.Dispose();
         _owner = null;
     }
 
@@ -240,18 +251,28 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         var key = NormalizeKey(KeyInterop.KeyFromVirtualKey((int)keyboardData.VkCode));
-        if (isKeyDown && TryHandleConfiguredHotkeys(key, GetCurrentModifiers()))
-        {
-            return new IntPtr(1);
-        }
 
-        if (isKeyUp)
+        if (!_isBindingMode)
         {
-            if (ReleaseConfiguredHotkeyStates(key))
+            if (isKeyDown && TryHandleConfiguredHotkeys(key, GetCurrentModifiers()))
             {
                 return new IntPtr(1);
             }
 
+            if (isKeyUp)
+            {
+                if (ReleaseConfiguredHotkeyStates(key))
+                {
+                    return new IntPtr(1);
+                }
+
+                DispatchKeyboardObserved(key, isKeyDown: false);
+                return CallNextHookEx(_mainKeyboardHookHandle, nCode, wParam, lParam);
+            }
+        }
+
+        if (isKeyUp)
+        {
             DispatchKeyboardObserved(key, isKeyDown: false);
             return CallNextHookEx(_mainKeyboardHookHandle, nCode, wParam, lParam);
         }

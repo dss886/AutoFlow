@@ -16,7 +16,8 @@
         WindowStyle="None"
         WindowStartupLocation="Manual"
         PreviewKeyDown="Window_OnPreviewKeyDown"
-        PreviewMouseDown="Window_OnPreviewMouseDown">
+        PreviewMouseDown="Window_OnPreviewMouseDown"
+        Closed="Window_OnClosed">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0"
                             CornerRadius="16"

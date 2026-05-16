@@ -63,6 +63,11 @@ public partial class SettingsWindow : Window
         Close();
     }
 
+    private void Window_OnClosed(object? sender, EventArgs e)
+    {
+        SetCapturingItem(null);
+    }
+
     private void Window_OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (_capturingItem is null)
@@ -161,10 +166,12 @@ public partial class SettingsWindow : Window
         _capturingItem = item;
         if (_capturingItem is null)
         {
+            _eventBus.Publish(new KeyBindingModeChangedMessage(false));
             return;
         }
 
         _capturingItem.IsCapturing = true;
+        _eventBus.Publish(new KeyBindingModeChangedMessage(true));
         Activate();
         Focus();
     }
