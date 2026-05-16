@@ -48,7 +48,7 @@
                 <Button Width="88"
                         Margin="0,0,12,0"
                         Command="{Binding RecordCommand}"
-                        Content="录制"
+                        Content="{Binding RecordButtonText, FallbackValue=录制, TargetNullValue=录制}"
                         Tag="{svgc:SvgImage Source=/Assets/Record.svg, AppName=AutoFlow.App}"
                         ContentTemplate="{StaticResource AppButtonWithIconTemplate}"
                         Style="{StaticResource AppButtonDangerStyle}" />

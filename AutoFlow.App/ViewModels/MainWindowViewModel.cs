@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -20,13 +21,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly Action _openSettings;
     private readonly ScriptCatalogService _catalogService;
     private readonly ScriptRunnerService _runnerService;
+    private readonly InputRecordingSession _recordingSession = new();
     private readonly FileSystemWatcher _fileSystemWatcher;
     private readonly DispatcherTimer _scriptRefreshTimer;
     private readonly Queue<string> _logEntries = new();
     private ScriptDefinition? _selectedScript;
     private string _logOutput = string.Empty;
     private bool _isScreenToolVisible;
+    private bool _suppressNextScriptDirectoryRefreshLog;
+    private CancellationTokenSource? _recordCountdownCancellation;
+    private bool _isRecording;
     private bool _isDisposed;
+    private int _recordCountdownSeconds;
 
     public MainWindowViewModel(Action closeWindow, Action openSettings)
     {
@@ -110,6 +116,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string RunControlButtonText => IsScriptRunning ? "停止" : "运行";
 
+    public string RecordButtonText => _isRecording
+        ? "结束"
+        : _recordCountdownSeconds > 0
+            ? $"{_recordCountdownSeconds} 秒"
+            : "录制";
+
     public bool IsScreenToolVisible
     {
         get => _isScreenToolVisible;
@@ -124,6 +136,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged();
         }
     }
+
+    public bool IsRecording => _isRecording;
 
     public ICommand ToggleRunStateCommand { get; }
 
@@ -147,6 +161,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (!IsScriptRunning)
         {
+            if (IsRecordingOrCountdownActive())
+            {
+                AppendLog("录制进行中，无法启动脚本。");
+                return;
+            }
+
             _ = RunSelectedScriptAsync();
         }
     }
@@ -200,6 +220,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _runnerService.LogGenerated -= RunnerService_OnLogGenerated;
         _runnerService.ScriptStateChanged -= RunnerService_OnScriptStateChanged;
         _runnerService.Stop();
+        CancelRecordCountdownCore();
+        _recordCountdownCancellation?.Dispose();
+        _recordCountdownCancellation = null;
+        _isRecording = false;
     }
 
     private void ToggleRunState()
@@ -207,6 +231,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (IsScriptRunning)
         {
             _runnerService.Stop();
+            return;
+        }
+
+        if (IsRecordingOrCountdownActive())
+        {
+            AppendLog("录制进行中，无法启动脚本。");
             return;
         }
 
@@ -294,6 +324,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
+            _suppressNextScriptDirectoryRefreshLog = true;
             File.Delete(targetScript.FilePath);
             AppendLog($"已删除脚本: {targetScript.FileName}");
             LoadScripts();
@@ -313,7 +344,46 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void Record()
     {
-        AppendLog("录制功能尚未实现。");
+        if (_isRecording)
+        {
+            StopRecording();
+            return;
+        }
+
+        if (_recordCountdownCancellation is not null)
+        {
+            CancelRecordCountdown();
+            return;
+        }
+
+        if (IsScriptRunning)
+        {
+            System.Windows.MessageBox.Show("脚本运行中无法开始录制，请先停止脚本。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        _ = StartRecordCountdownAsync();
+    }
+
+    public void HandleObservedKeyboardInput(Key key, bool isKeyDown)
+    {
+        if (!_isRecording || !_recordingSession.RecordKeyboardEvent(key, isKeyDown))
+        {
+            return;
+        }
+
+        var reading = InputRecordingSession.CaptureCursorReading();
+        AppendLog($"{FormatKeyboardLogPrefix(key, isKeyDown)}，{reading.ToLogMessage()}");
+    }
+
+    public void HandleObservedMouseInput(string button, bool isButtonDown, int x, int y)
+    {
+        if (!_isRecording || !_recordingSession.RecordMouseButtonEvent(button, isButtonDown, x, y))
+        {
+            return;
+        }
+
+        AppendLog($"{FormatMouseLogPrefix(button, isButtonDown)}，{InputRecordingSession.CreateReadingLogMessage(x, y)}");
     }
 
     private void LoadScripts()
@@ -414,6 +484,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         _scriptRefreshTimer.Stop();
         LoadScripts();
+
+        if (_suppressNextScriptDirectoryRefreshLog)
+        {
+            _suppressNextScriptDirectoryRefreshLog = false;
+            return;
+        }
+
         AppendLog("检测到脚本目录变化，已自动刷新。");
     }
 
@@ -429,6 +506,140 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static Dispatcher GetUiDispatcher()
     {
         return System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+    }
+
+    private bool IsRecordingOrCountdownActive()
+    {
+        return _isRecording || _recordCountdownCancellation is not null;
+    }
+
+    private async Task StartRecordCountdownAsync()
+    {
+        var cancellation = new CancellationTokenSource();
+        _recordCountdownCancellation = cancellation;
+        AppendLog("录制将在 3 秒后开始，再次点击录制可取消。");
+
+        try
+        {
+            for (var seconds = 3; seconds >= 1; seconds--)
+            {
+                _recordCountdownSeconds = seconds;
+                OnPropertyChanged(nameof(RecordButtonText));
+                await Task.Delay(1000, cancellation.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        finally
+        {
+            if (ReferenceEquals(_recordCountdownCancellation, cancellation))
+            {
+                _recordCountdownCancellation = null;
+            }
+
+            _recordCountdownSeconds = 0;
+            OnPropertyChanged(nameof(RecordButtonText));
+            cancellation.Dispose();
+        }
+
+        StartRecording();
+    }
+
+    private void CancelRecordCountdown()
+    {
+        if (_recordCountdownCancellation is null)
+        {
+            return;
+        }
+
+        CancelRecordCountdownCore();
+        AppendLog("已取消录制倒计时。");
+    }
+
+    private void CancelRecordCountdownCore()
+    {
+        _recordCountdownCancellation?.Cancel();
+        _recordCountdownSeconds = 0;
+        OnPropertyChanged(nameof(RecordButtonText));
+    }
+
+    private void StartRecording()
+    {
+        _recordingSession.Start();
+        _isRecording = true;
+        OnPropertyChanged(nameof(IsRecording));
+        OnPropertyChanged(nameof(RecordButtonText));
+        AppendLog("录制已开始。");
+    }
+
+    private void StopRecording()
+    {
+        var now = DateTime.Now;
+        var scriptName = $"录制脚本 {now:yyyy-MM-dd HH:mm:ss}";
+        var description = $"由 AutoFlow 于 {now:yyyy-MM-dd HH:mm:ss} 录制生成";
+        var fileName = $"record_{now:yyyyMMdd_HHmmss}.lua";
+        var filePath = Path.Combine(ScriptsDirectory, fileName);
+
+        try
+        {
+            var scriptContent = _recordingSession.StopAndBuildScript(scriptName, description);
+            _suppressNextScriptDirectoryRefreshLog = true;
+            File.WriteAllText(filePath, scriptContent);
+
+            LoadScripts();
+            SelectedScript = Scripts.FirstOrDefault(item =>
+                string.Equals(item.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
+
+            AppendLog($"录制已完成，脚本已保存: {fileName}");
+            TrayIconService.Current?.ShowInfo("AutoFlow 录制完成", $"脚本已保存到 Scripts：{fileName}");
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"保存录制脚本失败: {ex.Message}");
+            System.Windows.MessageBox.Show($"保存录制脚本失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _isRecording = false;
+            OnPropertyChanged(nameof(IsRecording));
+            OnPropertyChanged(nameof(RecordButtonText));
+        }
+    }
+
+    private static string FormatMouseLogPrefix(string button, bool isButtonDown)
+    {
+        var buttonText = button switch
+        {
+            "left" => "左键",
+            "right" => "右键",
+            "middle" => "中键",
+            _ => button,
+        };
+
+        return isButtonDown ? $"录制鼠标{buttonText}按下" : $"录制鼠标{buttonText}抬起";
+    }
+
+    private static string FormatKeyboardLogPrefix(Key key, bool isKeyDown)
+    {
+        var keyName = key switch
+        {
+            Key.LeftCtrl or Key.RightCtrl => "Ctrl",
+            Key.LeftAlt or Key.RightAlt => "Alt",
+            Key.LeftShift or Key.RightShift => "Shift",
+            Key.LWin or Key.RWin => "Win",
+            Key.Return => "Enter",
+            Key.Escape => "Esc",
+            Key.Delete => "Del",
+            Key.Insert => "Ins",
+            Key.PageUp => "PgUp",
+            Key.PageDown => "PgDn",
+            >= Key.D0 and <= Key.D9 => ((char)('0' + (key - Key.D0))).ToString(),
+            _ => key.ToString(),
+        };
+
+        return isKeyDown ? $"录制键盘按下 {keyName}" : $"录制键盘抬起 {keyName}";
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

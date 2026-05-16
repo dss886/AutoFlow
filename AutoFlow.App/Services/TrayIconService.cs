@@ -26,6 +26,8 @@ internal sealed class TrayIconService : IDisposable
     private readonly Icon _notifyIconImage;
     private readonly DrawingFont _notifyMenuFont;
 
+    public static TrayIconService? Current { get; private set; }
+
     public TrayIconService(ICommand openMainWindowCommand, ICommand exitApplicationCommand)
     {
         _notifyMenuFont = new DrawingFont(AppMenuTokens.FontFamilyName, AppMenuTokens.TrayFontSize, DrawingFontStyle.Regular, DrawingGraphicsUnit.Point);
@@ -66,14 +68,29 @@ internal sealed class TrayIconService : IDisposable
                 ExecuteCommand(openMainWindowCommand);
             }
         };
+
+        Current = this;
     }
 
     public void Dispose()
     {
+        if (ReferenceEquals(Current, this))
+        {
+            Current = null;
+        }
+
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _notifyIconImage.Dispose();
         _notifyMenuFont.Dispose();
+    }
+
+    public void ShowInfo(string title, string message, int timeoutMilliseconds = 3000)
+    {
+        _notifyIcon.BalloonTipTitle = title;
+        _notifyIcon.BalloonTipText = message;
+        _notifyIcon.BalloonTipIcon = Forms.ToolTipIcon.Info;
+        _notifyIcon.ShowBalloonTip(timeoutMilliseconds);
     }
 
     private static Forms.ToolStripMenuItem CreateNotifyMenuItem(string text)

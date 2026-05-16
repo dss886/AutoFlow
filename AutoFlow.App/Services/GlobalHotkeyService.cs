@@ -59,6 +59,8 @@ public sealed class GlobalHotkeyService : IDisposable
 
     public event Action? ScreenToolColorDisplayToggleRequested;
 
+    public event Action<Key, bool>? KeyboardInputObserved;
+
     public void Initialize(Window owner)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
@@ -255,11 +257,16 @@ public sealed class GlobalHotkeyService : IDisposable
 
         if (isKeyUp)
         {
-            return ReleaseConfiguredHotkeyStates(key)
-                ? new IntPtr(1)
-                : CallNextHookEx(_mainKeyboardHookHandle, nCode, wParam, lParam);
+            if (ReleaseConfiguredHotkeyStates(key))
+            {
+                return new IntPtr(1);
+            }
+
+            DispatchKeyboardObserved(key, isKeyDown: false);
+            return CallNextHookEx(_mainKeyboardHookHandle, nCode, wParam, lParam);
         }
 
+        DispatchKeyboardObserved(key, isKeyDown: true);
         return CallNextHookEx(_mainKeyboardHookHandle, nCode, wParam, lParam);
     }
 
@@ -493,6 +500,16 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         _owner.Dispatcher.BeginInvoke(callback);
+    }
+
+    private void DispatchKeyboardObserved(Key key, bool isKeyDown)
+    {
+        if (_owner is null || key == Key.None)
+        {
+            return;
+        }
+
+        _owner.Dispatcher.BeginInvoke(new Action(() => KeyboardInputObserved?.Invoke(key, isKeyDown)));
     }
 
     private static bool IsConfiguredHotkeyMatch(ShortcutGesture gesture, Key key, ModifierKeys modifiers)
