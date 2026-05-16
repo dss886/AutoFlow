@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Windows;
@@ -20,6 +21,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly AppLoggerService _logger;
     private readonly AppSoundService _soundService;
     private readonly PathService _pathService;
+    private readonly LocalSettingsService _localSettingsService;
     private readonly ScriptCatalogService _catalogService;
     private readonly ScriptRunnerService _runnerService;
     private readonly InputRecordingSession _recordingSession;
@@ -36,6 +38,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public MainWindowViewModel(
         PathService pathService,
+        LocalSettingsService localSettingsService,
         ScreenColorService screenColorService,
         ScriptCatalogService catalogService,
         ScriptRunnerService runnerService,
@@ -46,6 +49,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _soundService = soundService ?? throw new ArgumentNullException(nameof(soundService));
         _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
+        _localSettingsService = localSettingsService ?? throw new ArgumentNullException(nameof(localSettingsService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _runnerService = runnerService ?? throw new ArgumentNullException(nameof(runnerService));
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -53,6 +57,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         ScriptsDirectory = _pathService.ResolveScriptsDirectory();
         _pathService.EnsureDirectory(ScriptsDirectory);
+        EnsureDemoScripts();
 
         _runnerService.ScriptStateChanged += RunnerService_OnScriptStateChanged;
 
@@ -398,6 +403,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _logger.D($"{FormatMouseLogPrefix(button, isButtonDown)}，{_recordingSession.CreateReadingLogMessage(x, y)}");
+    }
+
+    private void EnsureDemoScripts()
+    {
+        if (_localSettingsService.LoadDemoScriptsInitialized())
+        {
+            return;
+        }
+
+        var demoFileNames = new[] { "demo.lua", "demo2.lua" };
+        var assembly = typeof(MainWindowViewModel).Assembly;
+
+        foreach (var fileName in demoFileNames)
+        {
+            var resourceName = $"AutoFlow.App.Resources.{fileName}";
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is null)
+            {
+                continue;
+            }
+
+            var targetPath = Path.Combine(ScriptsDirectory, fileName);
+            using var reader = new StreamReader(stream);
+            File.WriteAllText(targetPath, reader.ReadToEnd());
+        }
+
+        _localSettingsService.SaveDemoScriptsInitialized();
     }
 
     private void LoadScripts()

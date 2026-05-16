@@ -5,8 +5,7 @@ namespace AutoFlow.App.Services;
 
 public sealed class AppSoundService
 {
-    private static readonly string SoundsDirectory =
-        Path.Combine(AppContext.BaseDirectory, "Assets", "Sounds");
+    private const string ResourceUriPrefix = "pack://application:,,,/Assets/Sounds/";
 
     private readonly Dictionary<string, SoundPlayer> _players = new(StringComparer.OrdinalIgnoreCase);
 
@@ -36,13 +35,14 @@ public sealed class AppSoundService
         {
             if (!_players.TryGetValue(fileName, out var player))
             {
-                var soundPath = Path.Combine(SoundsDirectory, fileName);
-                if (!File.Exists(soundPath))
+                var uri = new Uri(ResourceUriPrefix + fileName, UriKind.Absolute);
+                var streamInfo = System.Windows.Application.GetResourceStream(uri);
+                if (streamInfo == null)
                 {
                     return;
                 }
 
-                player = new SoundPlayer(soundPath);
+                player = new SoundPlayer(streamInfo.Stream);
                 player.Load();
                 _players[fileName] = player;
             }

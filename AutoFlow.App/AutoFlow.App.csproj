@@ -3,12 +3,22 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <AssemblyName>AutoFlow</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <DefaultItemExcludes>$(DefaultItemExcludes);temp\**</DefaultItemExcludes>
+    <ApplicationIcon>Assets\Icons\AppIcon.ico</ApplicationIcon>
+    <DefaultItemExcludes>$(DefaultItemExcludes);.temp\**;publish\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,26 +28,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Assets\Icons\AppIcon.png" />
-    <None Remove="Assets\Icons\Close.svg" />
-    <None Remove="Assets\Icons\Pause.svg" />
-    <None Remove="Assets\Icons\Play.svg" />
-    <None Remove="Assets\Icons\Refresh.svg" />
-    <None Remove="Assets\Icons\Record.svg" />
-    <None Remove="Assets\Icons\Settings.svg" />
-    <Resource Include="Assets\Icons\AppIcon.png" />
-    <Resource Include="Assets\Icons\Close.svg" />
-    <Resource Include="Assets\Icons\Pause.svg" />
-    <Resource Include="Assets\Icons\Play.svg" />
-    <Resource Include="Assets\Icons\Refresh.svg" />
-    <Resource Include="Assets\Icons\Record.svg" />
-    <Resource Include="Assets\Icons\Settings.svg" />
+    <None Remove="Assets\Icons\*.png" />
+    <None Remove="Assets\Icons\*.svg" />
+    <None Remove="Assets\Icons\*.ico" />
+    <None Remove="Assets\Sounds\*.wav" />
+    <Resource Include="Assets\Icons\*.png" />
+    <Resource Include="Assets\Icons\*.svg" />
+    <Resource Include="Assets\Icons\*.ico" />
+    <Resource Include="Assets\Sounds\*.wav" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets\Sounds\*.wav">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="..\scripts\demo.lua" Link="Resources\demo.lua" />
+    <EmbeddedResource Include="..\scripts\demo2.lua" Link="Resources\demo2.lua" />
   </ItemGroup>
 
 </Project>
