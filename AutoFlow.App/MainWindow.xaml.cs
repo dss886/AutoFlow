@@ -54,10 +54,18 @@ public partial class MainWindow : Window
 
     private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ButtonState == MouseButtonState.Pressed)
+        if (e.ButtonState != MouseButtonState.Pressed)
         {
-            DragMove();
+            return;
         }
+
+        if (ViewModel.IsScreenToolVisible)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        DragMove();
     }
 
     private void MainWindow_OnSourceInitialized(object? sender, EventArgs e)

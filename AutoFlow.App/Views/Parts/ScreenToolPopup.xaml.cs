@@ -164,7 +164,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
             _mousePositionPollTimer.Stop();
         }
 
-        if (IsToolVisible && IsHostWindowVisible())
+        if (IsToolVisible)
         {
             QueueMousePositionUpdate(x, y);
         }
@@ -223,7 +223,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     private void SyncMousePositionTracking()
     {
-        if (IsToolVisible && IsHostWindowVisible())
+        if (IsToolVisible)
         {
             PopupRoot.IsOpen = true;
             _mouseHookFallbackTimer.Start();
@@ -234,12 +234,6 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
         StopMouseTrackingTimers();
         PopupRoot.IsOpen = false;
     }
-
-    private bool IsHostWindowVisible()
-    {
-        return _hostWindow?.IsVisible == true;
-    }
-
     private void UpdateMousePosition()
     {
         if (!GetCursorPos(out var point))
@@ -462,7 +456,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     {
         _isMousePositionUpdateQueued = false;
 
-        if (!IsToolVisible || !IsHostWindowVisible())
+        if (!IsToolVisible)
         {
             return;
         }
@@ -472,7 +466,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     private void MousePositionPollTimer_OnTick(object? sender, EventArgs e)
     {
-        if (!IsToolVisible || !IsHostWindowVisible())
+        if (!IsToolVisible)
         {
             return;
         }
@@ -482,7 +476,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     private void MouseHookFallbackTimer_OnTick(object? sender, EventArgs e)
     {
-        if (!IsToolVisible || !IsHostWindowVisible())
+        if (!IsToolVisible)
         {
             return;
         }
