@@ -136,12 +136,7 @@ public partial class SettingsWindow : Window
 
         if (duplicate is not null)
         {
-            MessageBox.Show(
-                $"快捷键 {shortcut.DisplayText} 已绑定给“{duplicate.DisplayName}”，请换一个组合键。",
-                "快捷键设置",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-            return false;
+            duplicate.Shortcut = default;
         }
 
         item.Shortcut = shortcut;
