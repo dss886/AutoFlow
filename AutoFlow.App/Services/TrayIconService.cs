@@ -124,7 +124,7 @@ internal sealed class TrayIconService : IDisposable
 
     private static Icon LoadNotifyIcon()
     {
-        var resourceInfo = System.Windows.Application.GetResourceStream(new Uri("Assets/AppIcon.png", UriKind.Relative));
+        var resourceInfo = System.Windows.Application.GetResourceStream(new Uri("Assets/Icons/AppIcon.png", UriKind.Relative));
         if (resourceInfo?.Stream is null)
         {
             return (Icon)SystemIcons.Application.Clone();

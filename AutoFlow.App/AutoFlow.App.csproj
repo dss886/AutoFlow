@@ -18,20 +18,26 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Assets\AppIcon.png" />
-    <None Remove="Assets\Close.svg" />
-    <None Remove="Assets\Pause.svg" />
-    <None Remove="Assets\Play.svg" />
-    <None Remove="Assets\Refresh.svg" />
-    <None Remove="Assets\Record.svg" />
-    <None Remove="Assets\Settings.svg" />
-    <Resource Include="Assets\AppIcon.png" />
-    <Resource Include="Assets\Close.svg" />
-    <Resource Include="Assets\Pause.svg" />
-    <Resource Include="Assets\Play.svg" />
-    <Resource Include="Assets\Refresh.svg" />
-    <Resource Include="Assets\Record.svg" />
-    <Resource Include="Assets\Settings.svg" />
+    <None Remove="Assets\Icons\AppIcon.png" />
+    <None Remove="Assets\Icons\Close.svg" />
+    <None Remove="Assets\Icons\Pause.svg" />
+    <None Remove="Assets\Icons\Play.svg" />
+    <None Remove="Assets\Icons\Refresh.svg" />
+    <None Remove="Assets\Icons\Record.svg" />
+    <None Remove="Assets\Icons\Settings.svg" />
+    <Resource Include="Assets\Icons\AppIcon.png" />
+    <Resource Include="Assets\Icons\Close.svg" />
+    <Resource Include="Assets\Icons\Pause.svg" />
+    <Resource Include="Assets\Icons\Play.svg" />
+    <Resource Include="Assets\Icons\Refresh.svg" />
+    <Resource Include="Assets\Icons\Record.svg" />
+    <Resource Include="Assets\Icons\Settings.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Sounds\*.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

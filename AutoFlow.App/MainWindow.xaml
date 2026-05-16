@@ -9,7 +9,7 @@
         xmlns:views="clr-namespace:AutoFlow.App.Views.Parts"
         mc:Ignorable="d"
         Title="AutoFlow - Windows 自动化脚本工具"
-        Icon="Assets/AppIcon.png"
+        Icon="Assets/Icons/AppIcon.png"
         Width="1080"
         Height="720"
         MinWidth="1080"
@@ -61,7 +61,7 @@
                         <Image Width="14"
                                Height="14"
                                IsHitTestVisible="False"
-                               Source="{svgc:SvgImage Source=/Assets/Settings.svg, AppName=AutoFlow.App}" />
+                               Source="{svgc:SvgImage Source=/Assets/Icons/Settings.svg, AppName=AutoFlow.App}" />
                     </Button>
                     <Button Command="{Binding CloseWindowCommand}"
                             Style="{StaticResource AppIconButtonStyle}"
@@ -69,7 +69,7 @@
                         <Image Width="12"
                                Height="12"
                                IsHitTestVisible="False"
-                               Source="{svgc:SvgImage Source=/Assets/Close.svg, AppName=AutoFlow.App}" />
+                               Source="{svgc:SvgImage Source=/Assets/Icons/Close.svg, AppName=AutoFlow.App}" />
                     </Button>
                 </StackPanel>
             </Grid>

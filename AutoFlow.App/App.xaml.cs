@@ -65,6 +65,7 @@ public partial class App : System.Windows.Application
         var services = new ServiceCollection();
         // Services
         services.AddSingleton<AppLoggerService>();
+        services.AddSingleton<AppSoundService>();
         services.AddSingleton<AutomationInputService>();
         services.AddSingleton<ExceptionLogService>();
         services.AddSingleton<GlobalHotkeyService>();

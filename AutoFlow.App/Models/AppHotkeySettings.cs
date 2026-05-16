@@ -7,9 +7,9 @@ public sealed class AppHotkeySettings
 {
     public ShortcutGesture Run { get; set; } = ShortcutGesture.FromKey(Key.F10);
 
-    public ShortcutGesture Stop { get; set; } = ShortcutGesture.FromKey(Key.F12);
+    public ShortcutGesture Stop { get; set; } = ShortcutGesture.FromKey(Key.F11);
 
-    public ShortcutGesture Record { get; set; } = ShortcutGesture.FromGesture(Key.R, ModifierKeys.Control | ModifierKeys.Alt);
+    public ShortcutGesture Record { get; set; } = ShortcutGesture.FromKey(Key.F12);
 
     public ShortcutGesture ScreenTool { get; set; } = ShortcutGesture.FromGesture(Key.S, ModifierKeys.Control | ModifierKeys.Alt);
 

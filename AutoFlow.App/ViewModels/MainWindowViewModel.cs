@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly AppLoggerService _logger;
+    private readonly AppSoundService _soundService;
     private readonly PathService _pathService;
     private readonly ScriptCatalogService _catalogService;
     private readonly ScriptRunnerService _runnerService;
@@ -38,10 +39,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ScreenColorService screenColorService,
         ScriptCatalogService catalogService,
         ScriptRunnerService runnerService,
+        AppSoundService soundService,
         IEventBus eventBus,
         AppLoggerService logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _soundService = soundService ?? throw new ArgumentNullException(nameof(soundService));
         _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _runnerService = runnerService ?? throw new ArgumentNullException(nameof(runnerService));
@@ -470,6 +473,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             OnPropertyChanged(nameof(IsScriptRunning));
             OnPropertyChanged(nameof(RunControlButtonText));
+
+            if (isRunning)
+            {
+                _soundService.PlayScriptStarted();
+            }
+            else
+            {
+                _soundService.PlayScriptStopped();
+            }
         });
     }
 
@@ -565,6 +577,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(IsRecording));
         OnPropertyChanged(nameof(RecordButtonText));
         _logger.V("录制已开始。");
+        _soundService.PlayRecordingStarted();
     }
 
     private void StopRecording()
@@ -586,6 +599,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 string.Equals(item.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
 
             _logger.V($"录制已完成，脚本已保存为: {fileName}");
+            _soundService.PlayRecordingCompleted();
             _eventBus.Publish(new TrayInfoRequestedMessage("AutoFlow 录制完成", $"脚本已保存到 Scripts：{fileName}"));
         }
         catch (Exception ex)
