@@ -19,6 +19,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private const double PopupPadding = 8;
     private const int MouseHookFallbackDelayMs = 150;
 
+    private readonly AppLoggerService _logger = AppLoggerService.Instance;
     private readonly DispatcherTimer _mouseHookFallbackTimer;
     private readonly DispatcherTimer _mousePositionPollTimer;
     private Window? _hostWindow;
@@ -200,6 +201,11 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
         LocalSettingsService.SaveScreenToolColorDisplayFormat(_colorDisplayFormat);
         RefreshContent();
+    }
+
+    public void RecordCurrentReading()
+    {
+        _logger.I(CreateCurrentReadingLogMessage());
     }
 
     public string CreateCurrentReadingLogMessage()

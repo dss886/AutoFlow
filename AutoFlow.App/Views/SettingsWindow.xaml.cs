@@ -12,18 +12,19 @@ namespace AutoFlow.App.Views;
 
 public partial class SettingsWindow : Window
 {
-    private readonly Action _hotkeysChanged;
+    private readonly AppLoggerService _logger = AppLoggerService.Instance;
     private ShortcutBindingItem? _capturingItem;
 
-    public SettingsWindow(Action hotkeysChanged)
+    public SettingsWindow()
     {
-        _hotkeysChanged = hotkeysChanged ?? throw new ArgumentNullException(nameof(hotkeysChanged));
         InitializeComponent();
         Bindings = CreateBindings(LocalSettingsService.LoadHotkeySettings());
         DataContext = this;
     }
 
     public ObservableCollection<ShortcutBindingItem> Bindings { get; }
+
+    public event Action? HotkeysChanged;
 
     private void RebindButton_OnClick(object sender, RoutedEventArgs e)
     {
@@ -44,6 +45,8 @@ public partial class SettingsWindow : Window
         {
             return;
         }
+
+        _logger.V($"{item.DisplayName}：已恢复为默认快捷键");
 
         if (ReferenceEquals(item, _capturingItem))
         {
@@ -140,7 +143,7 @@ public partial class SettingsWindow : Window
             Record = GetShortcut(ShortcutBindingKey.Record),
             ScreenTool = GetShortcut(ShortcutBindingKey.ScreenTool),
         });
-        _hotkeysChanged();
+        HotkeysChanged?.Invoke();
         return true;
     }
 

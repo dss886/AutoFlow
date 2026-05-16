@@ -17,15 +17,18 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        ViewModel = new MainWindowViewModel(Close, OpenSettingsWindow);
         Style = (Style)FindResource(typeof(Window));
         SourceInitialized += MainWindow_OnSourceInitialized;
-        DataContext = ViewModel;
-        _windowControlService = new WindowControlService(this, OnHotkeysChanged);
 
-        _hotkeyService = new GlobalHotkeyService(ViewModel.AppendLogMessage);
-        _mouseHookService = new GlobalMouseHookService(ViewModel.AppendLogMessage);
+        ViewModel = new MainWindowViewModel(Close, OpenSettingsWindow);
         ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;
+        DataContext = ViewModel;
+
+        _windowControlService = new WindowControlService(this);
+        _hotkeyService = new GlobalHotkeyService();
+        _mouseHookService = new GlobalMouseHookService();
+        _windowControlService.HotkeysChanged += OnHotkeysChanged;
+
         SubscribeInputServices();
     }
 
@@ -51,6 +54,7 @@ public partial class MainWindow : Window
     {
         ViewModel.PropertyChanged -= ViewModel_OnPropertyChanged;
         UnsubscribeInputServices();
+        _windowControlService.HotkeysChanged -= OnHotkeysChanged;
         _hotkeyService.Dispose();
         _mouseHookService.Dispose();
         ViewModel.Dispose();
@@ -92,7 +96,7 @@ public partial class MainWindow : Window
 
     private void OnHotkeysChanged()
     {
-        _hotkeyService.ReloadConfiguredHotkeys(showFailureMessage: true);
+        _hotkeyService.ReloadConfiguredHotkeys();
     }
 
     private void ViewModel_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -101,16 +105,6 @@ public partial class MainWindow : Window
         {
             _hotkeyService.SetScreenToolShortcutsEnabled(ViewModel.IsScreenToolVisible);
         }
-    }
-
-    private void HandleScreenToolRecordRequested()
-    {
-        ViewModel.AppendLogMessage(ScreenToolPopupControl.CreateCurrentReadingLogMessage());
-    }
-
-    private void HandleScreenToolColorDisplayToggleRequested()
-    {
-        ScreenToolPopupControl.ToggleColorDisplayFormat();
     }
 
     public void PrepareForExit()
@@ -125,8 +119,8 @@ public partial class MainWindow : Window
         _hotkeyService.StopRequested += ViewModel.ExecuteStopCommand;
         _hotkeyService.RecordRequested += ViewModel.ExecuteRecordCommand;
         _hotkeyService.ScreenToolToggleRequested += ViewModel.ExecuteToggleScreenToolCommand;
-        _hotkeyService.ScreenToolRecordRequested += HandleScreenToolRecordRequested;
-        _hotkeyService.ScreenToolColorDisplayToggleRequested += HandleScreenToolColorDisplayToggleRequested;
+        _hotkeyService.ScreenToolRecordRequested += ScreenToolPopupControl.RecordCurrentReading;
+        _hotkeyService.ScreenToolColorDisplayToggleRequested += ScreenToolPopupControl.ToggleColorDisplayFormat;
         _hotkeyService.KeyboardInputObserved += ViewModel.HandleObservedKeyboardInput;
 
         _mouseHookService.MouseMoved += ScreenToolPopupControl.OnGlobalMouseMove;
@@ -141,8 +135,8 @@ public partial class MainWindow : Window
         _hotkeyService.StopRequested -= ViewModel.ExecuteStopCommand;
         _hotkeyService.RecordRequested -= ViewModel.ExecuteRecordCommand;
         _hotkeyService.ScreenToolToggleRequested -= ViewModel.ExecuteToggleScreenToolCommand;
-        _hotkeyService.ScreenToolRecordRequested -= HandleScreenToolRecordRequested;
-        _hotkeyService.ScreenToolColorDisplayToggleRequested -= HandleScreenToolColorDisplayToggleRequested;
+        _hotkeyService.ScreenToolRecordRequested -= ScreenToolPopupControl.RecordCurrentReading;
+        _hotkeyService.ScreenToolColorDisplayToggleRequested -= ScreenToolPopupControl.ToggleColorDisplayFormat;
         _hotkeyService.KeyboardInputObserved -= ViewModel.HandleObservedKeyboardInput;
 
         _mouseHookService.MouseMoved -= ScreenToolPopupControl.OnGlobalMouseMove;

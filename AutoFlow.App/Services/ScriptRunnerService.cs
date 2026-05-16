@@ -4,19 +4,19 @@ namespace AutoFlow.App.Services;
 
 public sealed class ScriptRunnerService
 {
+    private readonly AppLoggerService _logger;
     private readonly LuaAutomationRuntime _runtime;
     private CancellationTokenSource? _currentRunCts;
 
-    public ScriptRunnerService(LuaAutomationRuntime runtime)
+    public ScriptRunnerService()
     {
-        _runtime = runtime;
+        _logger = AppLoggerService.Instance;
+        _runtime = new LuaAutomationRuntime();
     }
 
     public bool IsRunning => RunningScript is not null;
 
     public ScriptDefinition? RunningScript { get; private set; }
-
-    public event Action<string>? LogGenerated;
 
     public event Action<ScriptDefinition?, bool>? ScriptStateChanged;
 
@@ -30,28 +30,28 @@ public sealed class ScriptRunnerService
         _currentRunCts = new CancellationTokenSource();
         RunningScript = script;
         ScriptStateChanged?.Invoke(script, true);
-        LogGenerated?.Invoke($"开始执行脚本: {script.Name}");
+        _logger.V($"开始执行脚本: 「{script.Name}」");
 
         try
         {
-            await _runtime.ExecuteAsync(script.FilePath, LogGeneratedMessage, _currentRunCts.Token);
+            await _runtime.ExecuteAsync(script.FilePath, _currentRunCts.Token);
 
             if (_currentRunCts.Token.IsCancellationRequested)
             {
-                LogGenerated?.Invoke($"脚本已停止: {script.Name}");
+                _logger.V($"脚本已停止: 「{script.Name}」");
             }
             else
             {
-                LogGenerated?.Invoke($"脚本执行完成: {script.Name}");
+                _logger.V($"脚本执行完成: 「{script.Name}」");
             }
         }
         catch (OperationCanceledException)
         {
-            LogGenerated?.Invoke($"脚本已停止: {script.Name}");
+            _logger.V($"脚本已停止: 「{script.Name}」");
         }
         catch (Exception ex)
         {
-            LogGenerated?.Invoke($"脚本执行失败: {ex.Message}");
+            _logger.E($"脚本执行失败: 「{script.Name}」，错误信息: {ex.Message}");
         }
         finally
         {
@@ -67,10 +67,5 @@ public sealed class ScriptRunnerService
     public void Stop()
     {
         _currentRunCts?.Cancel();
-    }
-
-    private void LogGeneratedMessage(string message)
-    {
-        LogGenerated?.Invoke(message);
     }
 }

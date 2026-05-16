@@ -18,19 +18,19 @@ public sealed class WindowControlService
     private const double SettingsWindowGap = 16;
 
     private readonly Window _mainWindow;
-    private readonly Action _hotkeysChanged;
     private bool _allowExit;
     private bool _isSettingsWindowOnLeft;
     private SettingsWindow? _settingsWindow;
 
-    public WindowControlService(Window mainWindow, Action hotkeysChanged)
+    public WindowControlService(Window mainWindow)
     {
         _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
-        _hotkeysChanged = hotkeysChanged ?? throw new ArgumentNullException(nameof(hotkeysChanged));
 
         _mainWindow.LocationChanged += (_, _) => UpdateSettingsWindowBounds();
         _mainWindow.SizeChanged += (_, _) => UpdateSettingsWindowBounds();
     }
+
+    public event Action? HotkeysChanged;
 
     public void ApplyStartupPlacement()
     {
@@ -68,10 +68,11 @@ public sealed class WindowControlService
             return;
         }
 
-        _settingsWindow = new SettingsWindow(_hotkeysChanged)
+        _settingsWindow = new SettingsWindow()
         {
             Owner = _mainWindow,
         };
+        _settingsWindow.HotkeysChanged += SettingsWindow_OnHotkeysChanged;
         _settingsWindow.Closed += SettingsWindow_OnClosed;
 
         _isSettingsWindowOnLeft = ShouldOpenSettingsWindowOnLeft(_settingsWindow.Width);
@@ -92,15 +93,22 @@ public sealed class WindowControlService
             return;
         }
 
+        _settingsWindow.HotkeysChanged -= SettingsWindow_OnHotkeysChanged;
         _settingsWindow.Closed -= SettingsWindow_OnClosed;
         _settingsWindow.Close();
         _settingsWindow = null;
+    }
+
+    private void SettingsWindow_OnHotkeysChanged()
+    {
+        HotkeysChanged?.Invoke();
     }
 
     private void SettingsWindow_OnClosed(object? sender, EventArgs e)
     {
         if (_settingsWindow is not null)
         {
+            _settingsWindow.HotkeysChanged -= SettingsWindow_OnHotkeysChanged;
             _settingsWindow.Closed -= SettingsWindow_OnClosed;
             _settingsWindow = null;
         }

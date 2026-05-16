@@ -58,6 +58,10 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 
 - `screen.get_color(640, 360)` 返回 `#RRGGBB`
 
+## 日志说明
+
+- `host.log("消息")` 固定按信息级别输出到运行日志
+
 ## 注意事项
 
 - 自动化输入会直接作用于当前系统前台环境，运行脚本前请确认目标窗口安全。

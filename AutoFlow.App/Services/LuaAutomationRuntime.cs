@@ -1,22 +1,25 @@
 using MoonSharp.Interpreter;
+using AutoFlow.App.Models;
 
 namespace AutoFlow.App.Services;
 
 public sealed class LuaAutomationRuntime
 {
+    private readonly AppLoggerService _logger;
     private readonly AutomationInputService _inputService;
 
-    public LuaAutomationRuntime(AutomationInputService inputService)
+    public LuaAutomationRuntime()
     {
-        _inputService = inputService;
+        _logger = AppLoggerService.Instance;
+        _inputService = new AutomationInputService();
     }
 
-    public Task ExecuteAsync(string scriptPath, Action<string> log, CancellationToken cancellationToken)
+    public Task ExecuteAsync(string scriptPath, CancellationToken cancellationToken)
     {
         return Task.Run(() =>
         {
             var script = new Script(CoreModules.Preset_Complete);
-            RegisterHostApi(script, log, cancellationToken);
+            RegisterHostApi(script, cancellationToken);
             try
             {
                 script.DoFile(scriptPath);
@@ -33,22 +36,22 @@ public sealed class LuaAutomationRuntime
         _inputService.ReleasePressedInputs();
     }
 
-    private void RegisterHostApi(Script script, Action<string> log, CancellationToken cancellationToken)
+    private void RegisterHostApi(Script script, CancellationToken cancellationToken)
     {
-        script.Globals["host"] = BuildHostTable(script, log, cancellationToken);
+        script.Globals["host"] = BuildHostTable(script, cancellationToken);
         script.Globals["mouse"] = BuildMouseTable(script, cancellationToken);
         script.Globals["keyboard"] = BuildKeyboardTable(script, cancellationToken);
         script.Globals["screen"] = BuildScreenTable(script, cancellationToken);
     }
 
-    private Table BuildHostTable(Script script, Action<string> log, CancellationToken cancellationToken)
+    private Table BuildHostTable(Script script, CancellationToken cancellationToken)
     {
         var table = new Table(script);
         table["log"] = DynValue.NewCallback((_, args) =>
         {
             ThrowIfCancellationRequested(cancellationToken);
             var message = args.Count > 0 ? args[0].CastToString() ?? string.Empty : string.Empty;
-            log(message);
+            _logger.I(message, LogSource.Script);
             return DynValue.Nil;
         });
 

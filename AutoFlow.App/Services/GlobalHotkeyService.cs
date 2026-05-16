@@ -24,7 +24,7 @@ public sealed class GlobalHotkeyService : IDisposable
     private const int VkLWin = 0x5B;
     private const int VkRWin = 0x5C;
 
-    private readonly Action<string> _logMessage;
+    private readonly AppLoggerService _logger;
     private readonly HookProc _mainKeyboardHookProc;
     private readonly HookProc _screenToolKeyboardHookProc;
     private AppHotkeySettings _hotkeySettings = AppHotkeySettings.CreateDefault();
@@ -40,9 +40,9 @@ public sealed class GlobalHotkeyService : IDisposable
     private IntPtr _screenToolKeyboardHookHandle;
     private Window? _owner;
 
-    public GlobalHotkeyService(Action<string> logMessage)
+    public GlobalHotkeyService()
     {
-        _logMessage = logMessage ?? throw new ArgumentNullException(nameof(logMessage));
+        _logger = AppLoggerService.Instance;
         _mainKeyboardHookProc = MainKeyboardHookCallback;
         _screenToolKeyboardHookProc = ScreenToolKeyboardHookCallback;
     }
@@ -72,21 +72,16 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         _owner = owner;
-        ReloadConfiguredHotkeys(showFailureMessage: false);
+        ReloadConfiguredHotkeys();
         InstallMainKeyboardHook();
     }
 
-    public void ReloadConfiguredHotkeys(bool showFailureMessage)
+    public void ReloadConfiguredHotkeys()
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
         _hotkeySettings = LocalSettingsService.LoadHotkeySettings().Clone();
         ResetAllShortcutStates();
-
-        if (showFailureMessage)
-        {
-            _logMessage("快捷键设置已刷新。");
-        }
     }
 
     public bool HandlePreviewKeyDown(Key key)
@@ -181,12 +176,14 @@ public sealed class GlobalHotkeyService : IDisposable
         _mainKeyboardHookHandle = SetWindowsHookEx(WhKeyboardLl, _mainKeyboardHookProc, moduleHandle, 0);
         if (_mainKeyboardHookHandle != IntPtr.Zero)
         {
-            _logMessage("已启用主功能全局快捷键监听。");
             return;
         }
 
         var errorCode = Marshal.GetLastWin32Error();
-        _logMessage($"主功能全局快捷键监听启用失败，错误代码: {errorCode}");
+        LogConfiguredHotkeyUnavailable("运行", _hotkeySettings.Run, errorCode);
+        LogConfiguredHotkeyUnavailable("停止", _hotkeySettings.Stop, errorCode);
+        LogConfiguredHotkeyUnavailable("录制", _hotkeySettings.Record, errorCode);
+        LogConfiguredHotkeyUnavailable("屏幕工具", _hotkeySettings.ScreenTool, errorCode);
     }
 
     private void RemoveMainKeyboardHook()
@@ -212,12 +209,12 @@ public sealed class GlobalHotkeyService : IDisposable
         _screenToolKeyboardHookHandle = SetWindowsHookEx(WhKeyboardLl, _screenToolKeyboardHookProc, moduleHandle, 0);
         if (_screenToolKeyboardHookHandle != IntPtr.Zero)
         {
-            _logMessage("已启用屏幕工具专用快捷键监听。");
             return;
         }
 
         var errorCode = Marshal.GetLastWin32Error();
-        _logMessage($"屏幕工具专用快捷键监听启用失败，错误代码: {errorCode}");
+        _logger.E($"屏幕工具快捷键「R」注册失败，请检查当前环境。错误代码: {errorCode}");
+        _logger.E($"屏幕工具快捷键「Shift」注册失败，请检查当前环境。错误代码: {errorCode}");
     }
 
     private void RemoveScreenToolKeyboardHook()
@@ -229,7 +226,6 @@ public sealed class GlobalHotkeyService : IDisposable
 
         UnhookWindowsHookEx(_screenToolKeyboardHookHandle);
         _screenToolKeyboardHookHandle = IntPtr.Zero;
-        _logMessage("已取消屏幕工具专用快捷键监听。");
     }
 
     private IntPtr MainKeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -510,6 +506,11 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         _owner.Dispatcher.BeginInvoke(new Action(() => KeyboardInputObserved?.Invoke(key, isKeyDown)));
+    }
+
+    private void LogConfiguredHotkeyUnavailable(string featureName, ShortcutGesture gesture, int errorCode)
+    {
+        _logger.E($"{featureName}功能快捷键「{gesture.DisplayText}」注册失败，请检查当前环境。错误代码: {errorCode}");
     }
 
     private static bool IsConfiguredHotkeyMatch(ShortcutGesture gesture, Key key, ModifierKeys modifiers)

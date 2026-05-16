@@ -19,14 +19,14 @@ public sealed class GlobalMouseHookService : IDisposable
     private const ushort XButton1 = 0x0001;
     private const ushort XButton2 = 0x0002;
 
-    private readonly Action<string> _logMessage;
+    private readonly AppLoggerService _logger;
     private readonly HookProc _mouseHookProc;
     private bool _isDisposed;
     private IntPtr _mouseHookHandle;
 
-    public GlobalMouseHookService(Action<string> logMessage)
+    public GlobalMouseHookService()
     {
-        _logMessage = logMessage ?? throw new ArgumentNullException(nameof(logMessage));
+        _logger = AppLoggerService.Instance;
         _mouseHookProc = MouseHookCallback;
     }
 
@@ -52,12 +52,11 @@ public sealed class GlobalMouseHookService : IDisposable
         _mouseHookHandle = SetWindowsHookEx(WhMouseLl, _mouseHookProc, moduleHandle, 0);
         if (_mouseHookHandle != IntPtr.Zero)
         {
-            _logMessage("已启用全局鼠标位置监听。");
             return;
         }
 
         var errorCode = Marshal.GetLastWin32Error();
-        _logMessage($"全局鼠标位置监听启用失败，错误代码: {errorCode}");
+        _logger.E($"全局鼠标位置监听注册失败，请检查当前环境。错误代码: {errorCode}");
     }
 
     public void Stop()

@@ -11,24 +11,23 @@
 
             <Border Background="{StaticResource BrushBackgroundDark}"
                     CornerRadius="6">
-                <TextBox x:Name="LogOutputTextBox"
-                         IsReadOnly="True"
-                         Padding="6"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         BorderBrush="Transparent"
-                         FontFamily="Consolas"
-                         FontSize="14"
-                         Foreground="{StaticResource BrushWhite87}"
-                         HorizontalScrollBarVisibility="Auto"
-                         Text="{Binding LogOutput, Mode=OneWay}"
-                         TextChanged="LogOutputTextBox_OnTextChanged"
-                         VerticalScrollBarVisibility="Auto">
-                    <TextBox.Resources>
+                <RichTextBox x:Name="LogOutputTextBox"
+                             Padding="6"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             BorderBrush="Transparent"
+                             FontFamily="Consolas"
+                             FontSize="14"
+                             Foreground="{StaticResource BrushWhite87}"
+                             IsDocumentEnabled="False"
+                             IsReadOnly="True"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Auto">
+                    <RichTextBox.Resources>
                         <Style TargetType="ScrollBar"
                                BasedOn="{StaticResource LogOutputScrollBarStyle}" />
-                    </TextBox.Resources>
-                </TextBox>
+                    </RichTextBox.Resources>
+                </RichTextBox>
             </Border>
         </DockPanel>
     </Border>

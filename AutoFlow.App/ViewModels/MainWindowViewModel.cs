@@ -15,18 +15,15 @@ namespace AutoFlow.App.ViewModels;
 
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
-    private const int MaxLogLineCount = 3000;
-
     private readonly Action _closeWindow;
     private readonly Action _openSettings;
+    private readonly AppLoggerService _logger;
     private readonly ScriptCatalogService _catalogService;
     private readonly ScriptRunnerService _runnerService;
     private readonly InputRecordingSession _recordingSession = new();
     private readonly FileSystemWatcher _fileSystemWatcher;
     private readonly DispatcherTimer _scriptRefreshTimer;
-    private readonly Queue<string> _logEntries = new();
     private ScriptDefinition? _selectedScript;
-    private string _logOutput = string.Empty;
     private bool _isScreenToolVisible;
     private bool _suppressNextScriptDirectoryRefreshLog;
     private CancellationTokenSource? _recordCountdownCancellation;
@@ -36,6 +33,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public MainWindowViewModel(Action closeWindow, Action openSettings)
     {
+        _logger = AppLoggerService.Instance;
         _closeWindow = closeWindow ?? throw new ArgumentNullException(nameof(closeWindow));
         _openSettings = openSettings ?? throw new ArgumentNullException(nameof(openSettings));
 
@@ -43,8 +41,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         PathService.EnsureDirectory(ScriptsDirectory);
 
         _catalogService = new ScriptCatalogService();
-        _runnerService = new ScriptRunnerService(new LuaAutomationRuntime(new AutomationInputService()));
-        _runnerService.LogGenerated += RunnerService_OnLogGenerated;
+        _runnerService = new ScriptRunnerService();
         _runnerService.ScriptStateChanged += RunnerService_OnScriptStateChanged;
 
         _scriptRefreshTimer = new DispatcherTimer
@@ -74,11 +71,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         CloseWindowCommand = new RelayCommand(_closeWindow);
 
         LoadScripts();
-        AppendLog("应用已启动。");
-        AppendLog($"脚本目录: {ScriptsDirectory}");
+        _logger.V($"应用已启动，脚本目录: {ScriptsDirectory}");
     }
 
     public ObservableCollection<ScriptDefinition> Scripts { get; } = new();
+
+    public ReadOnlyObservableCollection<AppLogEntry> LogEntries => _logger.Entries;
 
     public string ScriptsDirectory { get; }
 
@@ -93,21 +91,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             _selectedScript = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string LogOutput
-    {
-        get => _logOutput;
-        private set
-        {
-            if (_logOutput == value)
-            {
-                return;
-            }
-
-            _logOutput = value;
             OnPropertyChanged();
         }
     }
@@ -163,7 +146,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (IsRecordingOrCountdownActive())
             {
-                AppendLog("录制进行中，无法启动脚本。");
+                _logger.W("录制进行中，无法启动脚本。");
                 return;
             }
 
@@ -195,11 +178,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public void AppendLogMessage(string message)
-    {
-        AppendLog(message);
-    }
-
     public void Dispose()
     {
         if (_isDisposed)
@@ -217,7 +195,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _fileSystemWatcher.Renamed -= FileSystemWatcher_OnChanged;
         _fileSystemWatcher.Dispose();
 
-        _runnerService.LogGenerated -= RunnerService_OnLogGenerated;
         _runnerService.ScriptStateChanged -= RunnerService_OnScriptStateChanged;
         _runnerService.Stop();
         CancelRecordCountdownCore();
@@ -236,7 +213,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         if (IsRecordingOrCountdownActive())
         {
-            AppendLog("录制进行中，无法启动脚本。");
+            _logger.W("录制进行中，无法启动脚本。");
             return;
         }
 
@@ -267,7 +244,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            AppendLog($"启动脚本失败: {ex.Message}");
+            _logger.E($"启动脚本失败: {ex.Message}");
         }
     }
 
@@ -326,12 +303,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             _suppressNextScriptDirectoryRefreshLog = true;
             File.Delete(targetScript.FilePath);
-            AppendLog($"已删除脚本: {targetScript.FileName}");
+            _logger.V($"已删除脚本: 「{targetScript.FileName}」");
             LoadScripts();
         }
         catch (Exception ex)
         {
-            AppendLog($"删除脚本失败: {targetScript.FileName}，{ex.Message}");
+            _logger.E($"删除脚本失败: 「{targetScript.FileName}」，{ex.Message}");
             System.Windows.MessageBox.Show($"删除脚本失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -339,7 +316,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void ToggleScreenTool()
     {
         IsScreenToolVisible = !IsScreenToolVisible;
-        AppendLog(IsScreenToolVisible ? "屏幕工具已启动。" : "屏幕工具已关闭。");
+        _logger.V(IsScreenToolVisible ? "屏幕工具已启动。" : "屏幕工具已关闭。");
     }
 
     private void Record()
@@ -373,7 +350,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var reading = InputRecordingSession.CaptureCursorReading();
-        AppendLog($"{FormatKeyboardLogPrefix(key, isKeyDown)}，{reading.ToLogMessage()}");
+        _logger.D($"{FormatKeyboardLogPrefix(key, isKeyDown)}，{reading.ToLogMessage()}");
     }
 
     public void HandleObservedMouseInput(string button, bool isButtonDown, int x, int y)
@@ -383,7 +360,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        AppendLog($"{FormatMouseLogPrefix(button, isButtonDown)}，{InputRecordingSession.CreateReadingLogMessage(x, y)}");
+        _logger.D($"{FormatMouseLogPrefix(button, isButtonDown)}，{InputRecordingSession.CreateReadingLogMessage(x, y)}");
     }
 
     private void LoadScripts()
@@ -437,27 +414,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         LoadScripts();
-        AppendLog($"脚本文件不存在，已跳过操作: {selectedScript.FileName}");
+        _logger.W($"脚本文件不存在，已跳过操作: {selectedScript.FileName}");
         System.Windows.MessageBox.Show("所选脚本文件已不存在，列表已自动刷新。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
         return false;
-    }
-
-    private void AppendLog(string message)
-    {
-        var timestamped = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        _logEntries.Enqueue(timestamped);
-
-        while (_logEntries.Count > MaxLogLineCount)
-        {
-            _logEntries.Dequeue();
-        }
-
-        LogOutput = string.Join(Environment.NewLine, _logEntries);
-    }
-
-    private void RunnerService_OnLogGenerated(string message)
-    {
-        GetUiDispatcher().Invoke(() => AppendLog(message));
     }
 
     private void RunnerService_OnScriptStateChanged(ScriptDefinition? script, bool isRunning)
@@ -491,7 +450,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        AppendLog("检测到脚本目录变化，已自动刷新。");
+        _logger.V("检测到脚本目录变化，已自动刷新。");
     }
 
     private void FileSystemWatcher_OnChanged(object sender, FileSystemEventArgs e)
@@ -517,7 +476,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var cancellation = new CancellationTokenSource();
         _recordCountdownCancellation = cancellation;
-        AppendLog("录制将在 3 秒后开始，再次点击录制可取消。");
+        _logger.V("录制将在 3 秒后开始，再次点击录制可取消。");
 
         try
         {
@@ -555,7 +514,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         CancelRecordCountdownCore();
-        AppendLog("已取消录制倒计时。");
+        _logger.V("已取消录制倒计时。");
     }
 
     private void CancelRecordCountdownCore()
@@ -571,7 +530,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _isRecording = true;
         OnPropertyChanged(nameof(IsRecording));
         OnPropertyChanged(nameof(RecordButtonText));
-        AppendLog("录制已开始。");
+        _logger.V("录制已开始。");
     }
 
     private void StopRecording()
@@ -592,12 +551,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SelectedScript = Scripts.FirstOrDefault(item =>
                 string.Equals(item.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
 
-            AppendLog($"录制已完成，脚本已保存: {fileName}");
+            _logger.V($"录制已完成，脚本已保存为: {fileName}");
             TrayIconService.Current?.ShowInfo("AutoFlow 录制完成", $"脚本已保存到 Scripts：{fileName}");
         }
         catch (Exception ex)
         {
-            AppendLog($"保存录制脚本失败: {ex.Message}");
+            _logger.E($"保存录制脚本失败: {ex.Message}");
             System.Windows.MessageBox.Show($"保存录制脚本失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
