@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AutoFlow.App.Infrastructure;
@@ -20,6 +21,11 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private const double PopupOffsetY = 20;
     private const double PopupPadding = 8;
     private const int MouseHookFallbackDelayMs = 150;
+    private const int MonitorDefaultToNearest = 2;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const int EffectiveDpi = 0;
 
     private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly DispatcherTimer _mouseHookFallbackTimer;
@@ -119,6 +125,27 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetCursorPos(out NativePoint lpPoint);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromPoint(NativePoint pt, uint dwFlags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint uFlags);
+
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(
+        IntPtr hmonitor,
+        int dpiType,
+        out uint dpiX,
+        out uint dpiY);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint
@@ -302,6 +329,11 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
         PopupContentRoot.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         PopupContentRoot.UpdateLayout();
 
+        if (TryPositionPopupInDevicePixels(x, y, PopupContentRoot.DesiredSize))
+        {
+            return;
+        }
+
         var popupSize = PopupContentRoot.DesiredSize;
         var cursorPosition = TransformFromDevicePixels(x, y);
         var workArea = Screen.FromPoint(new DrawingPoint(x, y)).WorkingArea;
@@ -320,6 +352,65 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
         PopupRoot.VerticalOffset = popupTop;
     }
 
+    private bool TryPositionPopupInDevicePixels(int x, int y, Size popupSizeDip)
+    {
+        var popupHandle = GetPopupHandle();
+        if (popupHandle == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var (scaleX, scaleY) = GetMonitorScale(x, y);
+        var workArea = Screen.FromPoint(new DrawingPoint(x, y)).WorkingArea;
+        var popupWidth = Math.Max((int)Math.Ceiling(popupSizeDip.Width * scaleX), 1);
+        var popupHeight = Math.Max((int)Math.Ceiling(popupSizeDip.Height * scaleY), 1);
+        var offsetX = (int)Math.Round(PopupOffsetX * scaleX);
+        var offsetY = (int)Math.Round(PopupOffsetY * scaleY);
+        var paddingX = (int)Math.Round(PopupPadding * scaleX);
+        var paddingY = (int)Math.Round(PopupPadding * scaleY);
+        var popupLeft = ClampInt(
+            x + offsetX,
+            workArea.Left + paddingX,
+            workArea.Right - popupWidth - paddingX);
+        var popupTop = ClampInt(
+            y + offsetY,
+            workArea.Top + paddingY,
+            workArea.Bottom - popupHeight - paddingY);
+
+        PopupRoot.HorizontalOffset = 0;
+        PopupRoot.VerticalOffset = 0;
+
+        return SetWindowPos(
+            popupHandle,
+            IntPtr.Zero,
+            popupLeft,
+            popupTop,
+            0,
+            0,
+            SwpNoSize | SwpNoZOrder | SwpNoActivate);
+    }
+
+    private IntPtr GetPopupHandle()
+    {
+        return (PresentationSource.FromVisual(PopupContentRoot) as HwndSource)?.Handle ?? IntPtr.Zero;
+    }
+
+    private static (double ScaleX, double ScaleY) GetMonitorScale(int x, int y)
+    {
+        var monitor = MonitorFromPoint(new NativePoint { X = x, Y = y }, MonitorDefaultToNearest);
+        if (monitor == IntPtr.Zero)
+        {
+            return (1d, 1d);
+        }
+
+        if (GetDpiForMonitor(monitor, EffectiveDpi, out var dpiX, out var dpiY) != 0)
+        {
+            return (1d, 1d);
+        }
+
+        return (dpiX / 96d, dpiY / 96d);
+    }
+
     private WpfPoint TransformFromDevicePixels(double x, double y)
     {
         Visual visual = _hostWindow as Visual ?? this;
@@ -334,6 +425,16 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     }
 
     private static double Clamp(double value, double min, double max)
+    {
+        if (min > max)
+        {
+            return min;
+        }
+
+        return Math.Min(Math.Max(value, min), max);
+    }
+
+    private static int ClampInt(int value, int min, int max)
     {
         if (min > max)
         {
