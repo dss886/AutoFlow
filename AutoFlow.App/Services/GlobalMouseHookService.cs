@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using AutoFlow.App.Infrastructure;
 using AutoFlow.App.Models;
 
 namespace AutoFlow.App.Services;
@@ -20,23 +21,21 @@ public sealed class GlobalMouseHookService : IDisposable
     private const ushort XButton2 = 0x0002;
 
     private readonly AppLoggerService _logger;
+    private readonly IEventBus _eventBus;
     private readonly HookProc _mouseHookProc;
     private bool _isDisposed;
     private IntPtr _mouseHookHandle;
 
-    public GlobalMouseHookService()
+    public GlobalMouseHookService(IEventBus eventBus, AppLoggerService logger)
     {
-        _logger = AppLoggerService.Instance;
+        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mouseHookProc = MouseHookCallback;
     }
-
-    public event Action<int, int>? MouseMoved;
 
     public event Func<ShortcutMouseButton, bool>? ShortcutMouseButtonDown;
 
     public event Func<ShortcutMouseButton, bool>? ShortcutMouseButtonUp;
-
-    public event Action<string, bool, int, int>? MouseButtonObserved;
 
     public void Start()
     {
@@ -105,7 +104,7 @@ public sealed class GlobalMouseHookService : IDisposable
         var mouseData = Marshal.PtrToStructure<MouseHookData>(lParam);
         if (message == WmMouseMove)
         {
-            MouseMoved?.Invoke(mouseData.X, mouseData.Y);
+            _eventBus.Publish(new MouseMovedMessage(mouseData.X, mouseData.Y));
         }
 
         var shortcutMouseButton = ResolveShortcutMouseButton(message, mouseData.MouseData);
@@ -126,11 +125,11 @@ public sealed class GlobalMouseHookService : IDisposable
         var observedButton = ResolveObservedMouseButton(message);
         if (observedButton is not null)
         {
-            MouseButtonObserved?.Invoke(
+            _eventBus.Publish(new MouseButtonObservedMessage(
                 observedButton.Button,
                 observedButton.IsButtonDown,
                 mouseData.X,
-                mouseData.Y);
+                mouseData.Y));
         }
 
         return CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);

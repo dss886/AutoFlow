@@ -4,15 +4,21 @@ using AutoFlow.App.Models;
 
 namespace AutoFlow.App.Services;
 
-public static class LocalSettingsService
+public sealed class LocalSettingsService
 {
     private const string SettingsFileName = "config.json";
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
     };
+    private readonly PathService _pathService;
 
-    public static ScreenToolColorDisplayFormat LoadScreenToolColorDisplayFormat()
+    public LocalSettingsService(PathService pathService)
+    {
+        _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
+    }
+
+    public ScreenToolColorDisplayFormat LoadScreenToolColorDisplayFormat()
     {
         try
         {
@@ -25,7 +31,7 @@ public static class LocalSettingsService
         }
     }
 
-    public static void SaveScreenToolColorDisplayFormat(ScreenToolColorDisplayFormat colorDisplayFormat)
+    public void SaveScreenToolColorDisplayFormat(ScreenToolColorDisplayFormat colorDisplayFormat)
     {
         try
         {
@@ -40,7 +46,7 @@ public static class LocalSettingsService
         }
     }
 
-    public static LocalWindowPlacement? LoadWindowPlacement()
+    public LocalWindowPlacement? LoadWindowPlacement()
     {
         try
         {
@@ -53,7 +59,7 @@ public static class LocalSettingsService
         }
     }
 
-    public static void SaveWindowPlacement(LocalWindowPlacement windowPlacement)
+    public void SaveWindowPlacement(LocalWindowPlacement windowPlacement)
     {
         try
         {
@@ -67,7 +73,7 @@ public static class LocalSettingsService
         }
     }
 
-    public static AppHotkeySettings LoadHotkeySettings()
+    public AppHotkeySettings LoadHotkeySettings()
     {
         var defaults = AppHotkeySettings.CreateDefault();
 
@@ -88,7 +94,7 @@ public static class LocalSettingsService
         }
     }
 
-    public static void SaveHotkeySettings(AppHotkeySettings hotkeySettings)
+    public void SaveHotkeySettings(AppHotkeySettings hotkeySettings)
     {
         ArgumentNullException.ThrowIfNull(hotkeySettings);
 
@@ -108,7 +114,7 @@ public static class LocalSettingsService
         }
     }
 
-    private static LocalSettings LoadSettings()
+    private LocalSettings LoadSettings()
     {
         var settingsFilePath = GetSettingsFilePath();
         if (!File.Exists(settingsFilePath))
@@ -120,16 +126,16 @@ public static class LocalSettingsService
         return JsonSerializer.Deserialize<LocalSettings>(json) ?? new LocalSettings();
     }
 
-    private static void SaveSettings(LocalSettings settings)
+    private void SaveSettings(LocalSettings settings)
     {
-        var configDirectory = PathService.ResolveAppDataDirectory();
-        PathService.EnsureDirectory(configDirectory);
+        var configDirectory = _pathService.ResolveAppDataDirectory();
+        _pathService.EnsureDirectory(configDirectory);
         File.WriteAllText(GetSettingsFilePath(), JsonSerializer.Serialize(settings, SerializerOptions));
     }
 
-    private static string GetSettingsFilePath()
+    private string GetSettingsFilePath()
     {
-        return Path.Combine(PathService.ResolveAppDataDirectory(), SettingsFileName);
+        return Path.Combine(_pathService.ResolveAppDataDirectory(), SettingsFileName);
     }
 
     private sealed class LocalSettings

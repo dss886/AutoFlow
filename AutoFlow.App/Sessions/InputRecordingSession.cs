@@ -2,8 +2,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Input;
+using AutoFlow.App.Services;
 
-namespace AutoFlow.App.Services;
+namespace AutoFlow.App.Sessions;
 
 public sealed class InputRecordingSession
 {
@@ -11,10 +12,16 @@ public sealed class InputRecordingSession
     private const int ClickThresholdMilliseconds = 220;
     private const int ClickMoveThresholdPixels = 4;
 
+    private readonly ScreenColorService _screenColorService;
     private readonly List<RawInputEvent> _events = new();
     private readonly Stopwatch _stopwatch = new();
     private bool _isRecording;
     private long _nextSequence;
+
+    public InputRecordingSession(ScreenColorService screenColorService)
+    {
+        _screenColorService = screenColorService ?? throw new ArgumentNullException(nameof(screenColorService));
+    }
 
     public bool IsRecording => _isRecording;
 
@@ -75,22 +82,22 @@ public sealed class InputRecordingSession
         return true;
     }
 
-    public static CursorReading CaptureCursorReading()
+    public CursorReading CaptureCursorReading()
     {
         if (!GetCursorPos(out var point))
         {
-            return new CursorReading(0, 0, ScreenColorService.FormatHexColor(System.Windows.Media.Colors.White));
+            return new CursorReading(0, 0, _screenColorService.FormatHexColor(System.Windows.Media.Colors.White));
         }
 
         return new CursorReading(
             point.X,
             point.Y,
-            ScreenColorService.GetScreenColorHex(point.X, point.Y));
+            _screenColorService.GetScreenColorHex(point.X, point.Y));
     }
 
-    public static string CreateReadingLogMessage(int x, int y)
+    public string CreateReadingLogMessage(int x, int y)
     {
-        return $"鼠标位置 ({x}, {y}), 颜色 {ScreenColorService.GetScreenColorHex(x, y)}";
+        return $"鼠标位置 ({x}, {y}), 颜色 {_screenColorService.GetScreenColorHex(x, y)}";
     }
 
     private List<ScriptAction> BuildScriptActions(long stopTimestamp)

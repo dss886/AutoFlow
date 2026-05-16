@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
+using AutoFlow.App.Infrastructure;
 using AutoFlow.App.Services;
 using AutoFlow.App.ViewModels;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -13,21 +14,38 @@ public partial class MainWindow : Window
     private readonly GlobalMouseHookService _mouseHookService;
     private readonly WindowControlService _windowControlService;
 
-    public MainWindow()
+    public MainWindow(
+        MainWindowViewModel viewModel,
+        GlobalHotkeyService hotkeyService,
+        GlobalMouseHookService mouseHookService,
+        IEventBus eventBus,
+        AppLoggerService logger,
+        WindowControlService windowControlService,
+        LocalSettingsService localSettingsService,
+        ScreenColorService screenColorService)
     {
         InitializeComponent();
+        ArgumentNullException.ThrowIfNull(viewModel);
+        ArgumentNullException.ThrowIfNull(hotkeyService);
+        ArgumentNullException.ThrowIfNull(mouseHookService);
+        ArgumentNullException.ThrowIfNull(eventBus);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(windowControlService);
+        ArgumentNullException.ThrowIfNull(localSettingsService);
+        ArgumentNullException.ThrowIfNull(screenColorService);
 
         Style = (Style)FindResource(typeof(Window));
         SourceInitialized += MainWindow_OnSourceInitialized;
 
-        ViewModel = new MainWindowViewModel(Close, OpenSettingsWindow);
+        ViewModel = viewModel;
         ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;
         DataContext = ViewModel;
 
-        _windowControlService = new WindowControlService(this);
-        _hotkeyService = new GlobalHotkeyService();
-        _mouseHookService = new GlobalMouseHookService();
-        _windowControlService.HotkeysChanged += OnHotkeysChanged;
+        _hotkeyService = hotkeyService;
+        _mouseHookService = mouseHookService;
+        _windowControlService = windowControlService;
+        _windowControlService.Initialize(this);
+        ScreenToolPopupControl.Initialize(eventBus, logger, localSettingsService, screenColorService);
 
         SubscribeInputServices();
     }
@@ -54,7 +72,8 @@ public partial class MainWindow : Window
     {
         ViewModel.PropertyChanged -= ViewModel_OnPropertyChanged;
         UnsubscribeInputServices();
-        _windowControlService.HotkeysChanged -= OnHotkeysChanged;
+        ScreenToolPopupControl.DisposeSubscriptions();
+        _windowControlService.Dispose();
         _hotkeyService.Dispose();
         _mouseHookService.Dispose();
         ViewModel.Dispose();
@@ -89,16 +108,6 @@ public partial class MainWindow : Window
         base.OnPreviewKeyUp(e);
     }
 
-    private void OpenSettingsWindow()
-    {
-        _windowControlService.ToggleSettingsWindow();
-    }
-
-    private void OnHotkeysChanged()
-    {
-        _hotkeyService.ReloadConfiguredHotkeys();
-    }
-
     private void ViewModel_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainWindowViewModel.IsScreenToolVisible))
@@ -115,33 +124,13 @@ public partial class MainWindow : Window
 
     private void SubscribeInputServices()
     {
-        _hotkeyService.RunRequested += ViewModel.ExecuteRunCommand;
-        _hotkeyService.StopRequested += ViewModel.ExecuteStopCommand;
-        _hotkeyService.RecordRequested += ViewModel.ExecuteRecordCommand;
-        _hotkeyService.ScreenToolToggleRequested += ViewModel.ExecuteToggleScreenToolCommand;
-        _hotkeyService.ScreenToolRecordRequested += ScreenToolPopupControl.RecordCurrentReading;
-        _hotkeyService.ScreenToolColorDisplayToggleRequested += ScreenToolPopupControl.ToggleColorDisplayFormat;
-        _hotkeyService.KeyboardInputObserved += ViewModel.HandleObservedKeyboardInput;
-
-        _mouseHookService.MouseMoved += ScreenToolPopupControl.OnGlobalMouseMove;
         _mouseHookService.ShortcutMouseButtonDown += _hotkeyService.HandleGlobalMouseButtonDown;
         _mouseHookService.ShortcutMouseButtonUp += _hotkeyService.HandleGlobalMouseButtonUp;
-        _mouseHookService.MouseButtonObserved += ViewModel.HandleObservedMouseInput;
     }
 
     private void UnsubscribeInputServices()
     {
-        _hotkeyService.RunRequested -= ViewModel.ExecuteRunCommand;
-        _hotkeyService.StopRequested -= ViewModel.ExecuteStopCommand;
-        _hotkeyService.RecordRequested -= ViewModel.ExecuteRecordCommand;
-        _hotkeyService.ScreenToolToggleRequested -= ViewModel.ExecuteToggleScreenToolCommand;
-        _hotkeyService.ScreenToolRecordRequested -= ScreenToolPopupControl.RecordCurrentReading;
-        _hotkeyService.ScreenToolColorDisplayToggleRequested -= ScreenToolPopupControl.ToggleColorDisplayFormat;
-        _hotkeyService.KeyboardInputObserved -= ViewModel.HandleObservedKeyboardInput;
-
-        _mouseHookService.MouseMoved -= ScreenToolPopupControl.OnGlobalMouseMove;
         _mouseHookService.ShortcutMouseButtonDown -= _hotkeyService.HandleGlobalMouseButtonDown;
         _mouseHookService.ShortcutMouseButtonUp -= _hotkeyService.HandleGlobalMouseButtonUp;
-        _mouseHookService.MouseButtonObserved -= ViewModel.HandleObservedMouseInput;
     }
 }

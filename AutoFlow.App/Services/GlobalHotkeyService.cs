@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using AutoFlow.App.Infrastructure;
 using AutoFlow.App.Models;
 
 namespace AutoFlow.App.Services;
@@ -25,8 +26,11 @@ public sealed class GlobalHotkeyService : IDisposable
     private const int VkRWin = 0x5C;
 
     private readonly AppLoggerService _logger;
+    private readonly IEventBus _eventBus;
+    private readonly LocalSettingsService _localSettingsService;
     private readonly HookProc _mainKeyboardHookProc;
     private readonly HookProc _screenToolKeyboardHookProc;
+    private readonly IDisposable _hotkeysReloadSubscription;
     private AppHotkeySettings _hotkeySettings = AppHotkeySettings.CreateDefault();
     private bool _isDisposed;
     private bool _isScreenToolShortcutsEnabled;
@@ -40,26 +44,15 @@ public sealed class GlobalHotkeyService : IDisposable
     private IntPtr _screenToolKeyboardHookHandle;
     private Window? _owner;
 
-    public GlobalHotkeyService()
+    public GlobalHotkeyService(IEventBus eventBus, AppLoggerService logger, LocalSettingsService localSettingsService)
     {
-        _logger = AppLoggerService.Instance;
+        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _localSettingsService = localSettingsService ?? throw new ArgumentNullException(nameof(localSettingsService));
         _mainKeyboardHookProc = MainKeyboardHookCallback;
         _screenToolKeyboardHookProc = ScreenToolKeyboardHookCallback;
+        _hotkeysReloadSubscription = _eventBus.Subscribe<HotkeysReloadRequestedMessage>(_ => ReloadConfiguredHotkeys());
     }
-
-    public event Action? RunRequested;
-
-    public event Action? StopRequested;
-
-    public event Action? RecordRequested;
-
-    public event Action? ScreenToolToggleRequested;
-
-    public event Action? ScreenToolRecordRequested;
-
-    public event Action? ScreenToolColorDisplayToggleRequested;
-
-    public event Action<Key, bool>? KeyboardInputObserved;
 
     public void Initialize(Window owner)
     {
@@ -80,7 +73,7 @@ public sealed class GlobalHotkeyService : IDisposable
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-        _hotkeySettings = LocalSettingsService.LoadHotkeySettings().Clone();
+        _hotkeySettings = _localSettingsService.LoadHotkeySettings().Clone();
         ResetAllShortcutStates();
     }
 
@@ -145,6 +138,7 @@ public sealed class GlobalHotkeyService : IDisposable
 
         _isDisposed = true;
         CleanupAllRegistrations();
+        _hotkeysReloadSubscription.Dispose();
         _owner = null;
     }
 
@@ -301,18 +295,18 @@ public sealed class GlobalHotkeyService : IDisposable
 
     private bool TryHandleConfiguredHotkeys(Key key, ModifierKeys modifiers)
     {
-        return TryHandleConfiguredHotkey(_hotkeySettings.Run, key, modifiers, ref _isRunHotkeyPressed, RunRequested)
-            || TryHandleConfiguredHotkey(_hotkeySettings.Stop, key, modifiers, ref _isStopHotkeyPressed, StopRequested)
-            || TryHandleConfiguredHotkey(_hotkeySettings.Record, key, modifiers, ref _isRecordHotkeyPressed, RecordRequested)
-            || TryHandleConfiguredHotkey(_hotkeySettings.ScreenTool, key, modifiers, ref _isScreenToolHotkeyPressed, ScreenToolToggleRequested);
+        return TryHandleConfiguredHotkey(_hotkeySettings.Run, key, modifiers, ref _isRunHotkeyPressed, PublishRunRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.Stop, key, modifiers, ref _isStopHotkeyPressed, PublishStopRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.Record, key, modifiers, ref _isRecordHotkeyPressed, PublishRecordRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.ScreenTool, key, modifiers, ref _isScreenToolHotkeyPressed, PublishScreenToolToggleRequested);
     }
 
     private bool TryHandleConfiguredHotkeys(ShortcutMouseButton mouseButton, ModifierKeys modifiers)
     {
-        return TryHandleConfiguredHotkey(_hotkeySettings.Run, mouseButton, modifiers, ref _isRunHotkeyPressed, RunRequested)
-            || TryHandleConfiguredHotkey(_hotkeySettings.Stop, mouseButton, modifiers, ref _isStopHotkeyPressed, StopRequested)
-            || TryHandleConfiguredHotkey(_hotkeySettings.Record, mouseButton, modifiers, ref _isRecordHotkeyPressed, RecordRequested)
-            || TryHandleConfiguredHotkey(_hotkeySettings.ScreenTool, mouseButton, modifiers, ref _isScreenToolHotkeyPressed, ScreenToolToggleRequested);
+        return TryHandleConfiguredHotkey(_hotkeySettings.Run, mouseButton, modifiers, ref _isRunHotkeyPressed, PublishRunRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.Stop, mouseButton, modifiers, ref _isStopHotkeyPressed, PublishStopRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.Record, mouseButton, modifiers, ref _isRecordHotkeyPressed, PublishRecordRequested)
+            || TryHandleConfiguredHotkey(_hotkeySettings.ScreenTool, mouseButton, modifiers, ref _isScreenToolHotkeyPressed, PublishScreenToolToggleRequested);
     }
 
     private bool TryHandleConfiguredHotkey(
@@ -320,7 +314,7 @@ public sealed class GlobalHotkeyService : IDisposable
         Key key,
         ModifierKeys modifiers,
         ref bool pressedState,
-        Action? callback)
+        Action callback)
     {
         if (!IsConfiguredHotkeyMatch(gesture, key, modifiers))
         {
@@ -342,7 +336,7 @@ public sealed class GlobalHotkeyService : IDisposable
         ShortcutMouseButton mouseButton,
         ModifierKeys modifiers,
         ref bool pressedState,
-        Action? callback)
+        Action callback)
     {
         if (!IsConfiguredHotkeyMatch(gesture, mouseButton, modifiers))
         {
@@ -383,7 +377,7 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         _isScreenToolRecordKeyPressed = true;
-        Dispatch(ScreenToolRecordRequested);
+        Dispatch(PublishScreenToolRecordRequested);
         return true;
     }
 
@@ -401,7 +395,7 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         _isScreenToolShiftKeyPressed = true;
-        Dispatch(ScreenToolColorDisplayToggleRequested);
+        Dispatch(PublishScreenToolColorDisplayToggleRequested);
         return true;
     }
 
@@ -488,9 +482,9 @@ public sealed class GlobalHotkeyService : IDisposable
         _isScreenToolShiftKeyPressed = false;
     }
 
-    private void Dispatch(Action? callback)
+    private void Dispatch(Action callback)
     {
-        if (callback is null || _owner is null)
+        if (_owner is null)
         {
             return;
         }
@@ -505,7 +499,38 @@ public sealed class GlobalHotkeyService : IDisposable
             return;
         }
 
-        _owner.Dispatcher.BeginInvoke(new Action(() => KeyboardInputObserved?.Invoke(key, isKeyDown)));
+        _owner.Dispatcher.BeginInvoke(new Action(() =>
+            _eventBus.Publish(new KeyboardInputObservedMessage(key, isKeyDown))));
+    }
+
+    private void PublishRunRequested()
+    {
+        _eventBus.Publish(new RunRequestedMessage());
+    }
+
+    private void PublishStopRequested()
+    {
+        _eventBus.Publish(new StopRequestedMessage());
+    }
+
+    private void PublishRecordRequested()
+    {
+        _eventBus.Publish(new RecordRequestedMessage());
+    }
+
+    private void PublishScreenToolToggleRequested()
+    {
+        _eventBus.Publish(new ScreenToolToggleRequestedMessage());
+    }
+
+    private void PublishScreenToolRecordRequested()
+    {
+        _eventBus.Publish(new ScreenToolRecordRequestedMessage());
+    }
+
+    private void PublishScreenToolColorDisplayToggleRequested()
+    {
+        _eventBus.Publish(new ScreenToolColorDisplayToggleRequestedMessage());
     }
 
     private void LogConfiguredHotkeyUnavailable(string featureName, ShortcutGesture gesture, int errorCode)

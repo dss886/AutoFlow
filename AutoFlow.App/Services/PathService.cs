@@ -2,16 +2,16 @@ using System.IO;
 
 namespace AutoFlow.App.Services;
 
-public static class PathService
+public sealed class PathService
 {
-    public static string ResolveAppDataDirectory()
+    public string ResolveAppDataDirectory()
     {
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "AutoFlow");
     }
 
-    public static string ResolveLogsDirectory()
+    public string ResolveLogsDirectory()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
 
@@ -34,7 +34,7 @@ public static class PathService
         return Path.Combine(AppContext.BaseDirectory, "logs");
     }
 
-    public static string ResolveScriptsDirectory()
+    public string ResolveScriptsDirectory()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
 
@@ -57,7 +57,7 @@ public static class PathService
         return Path.Combine(AppContext.BaseDirectory, "scripts");
     }
 
-    public static void EnsureDirectory(string directoryPath)
+    public void EnsureDirectory(string directoryPath)
     {
         Directory.CreateDirectory(directoryPath);
     }

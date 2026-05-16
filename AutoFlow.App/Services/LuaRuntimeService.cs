@@ -3,15 +3,15 @@ using AutoFlow.App.Models;
 
 namespace AutoFlow.App.Services;
 
-public sealed class LuaAutomationRuntime
+public sealed class LuaRuntimeService
 {
     private readonly AppLoggerService _logger;
     private readonly AutomationInputService _inputService;
 
-    public LuaAutomationRuntime()
+    public LuaRuntimeService(AutomationInputService inputService, AppLoggerService logger)
     {
-        _logger = AppLoggerService.Instance;
-        _inputService = new AutomationInputService();
+        _inputService = inputService ?? throw new ArgumentNullException(nameof(inputService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public Task ExecuteAsync(string scriptPath, CancellationToken cancellationToken)

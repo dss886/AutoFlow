@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AutoFlow.App.Infrastructure;
+using AutoFlow.App.Models;
 using AutoFlow.App.Services;
 using DrawingPoint = System.Drawing.Point;
 using MediaColor = System.Windows.Media.Color;
@@ -19,9 +21,13 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private const double PopupPadding = 8;
     private const int MouseHookFallbackDelayMs = 150;
 
-    private readonly AppLoggerService _logger = AppLoggerService.Instance;
+    private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly DispatcherTimer _mouseHookFallbackTimer;
     private readonly DispatcherTimer _mousePositionPollTimer;
+    private IEventBus? _eventBus;
+    private AppLoggerService? _logger;
+    private LocalSettingsService? _localSettingsService;
+    private ScreenColorService? _screenColorService;
     private Window? _hostWindow;
     private bool _hasObservedMousePosition;
     private bool _isMousePollFallbackActive;
@@ -33,13 +39,11 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private int _observedMouseX;
     private int _observedMouseY;
     private MediaColor _currentColor = Colors.White;
-    private readonly ScreenToolColorDisplayFormat _defaultColorDisplayFormat = LocalSettingsService.LoadScreenToolColorDisplayFormat();
-    private ScreenToolColorDisplayFormat _colorDisplayFormat;
+    private ScreenToolColorDisplayFormat _colorDisplayFormat = ScreenToolColorDisplayFormat.Hex;
 
     public ScreenToolPopup()
     {
         InitializeComponent();
-        _colorDisplayFormat = _defaultColorDisplayFormat;
 
         Loaded += ScreenToolPopup_OnLoaded;
         Unloaded += ScreenToolPopup_OnUnloaded;
@@ -70,6 +74,47 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     {
         get => (bool)GetValue(IsToolVisibleProperty);
         set => SetValue(IsToolVisibleProperty, value);
+    }
+
+    public void Initialize(
+        IEventBus eventBus,
+        AppLoggerService logger,
+        LocalSettingsService localSettingsService,
+        ScreenColorService screenColorService)
+    {
+        ArgumentNullException.ThrowIfNull(eventBus);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(localSettingsService);
+        ArgumentNullException.ThrowIfNull(screenColorService);
+
+        if (_eventBus is not null)
+        {
+            return;
+        }
+
+        _eventBus = eventBus;
+        _logger = logger;
+        _localSettingsService = localSettingsService;
+        _screenColorService = screenColorService;
+        _colorDisplayFormat = _localSettingsService.LoadScreenToolColorDisplayFormat();
+        _eventSubscriptions.Add(_eventBus.Subscribe<MouseMovedMessage>(message => OnGlobalMouseMove(message.X, message.Y)));
+        _eventSubscriptions.Add(_eventBus.Subscribe<ScreenToolRecordRequestedMessage>(_ => RecordCurrentReading()));
+        _eventSubscriptions.Add(_eventBus.Subscribe<ScreenToolColorDisplayToggleRequestedMessage>(_ => ToggleColorDisplayFormat()));
+        RefreshContent();
+    }
+
+    public void DisposeSubscriptions()
+    {
+        foreach (var subscription in _eventSubscriptions)
+        {
+            subscription.Dispose();
+        }
+
+        _eventSubscriptions.Clear();
+        _eventBus = null;
+        _logger = null;
+        _localSettingsService = null;
+        _screenColorService = null;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -199,13 +244,13 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
             ? ScreenToolColorDisplayFormat.Rgb
             : ScreenToolColorDisplayFormat.Hex;
 
-        LocalSettingsService.SaveScreenToolColorDisplayFormat(_colorDisplayFormat);
+        _localSettingsService?.SaveScreenToolColorDisplayFormat(_colorDisplayFormat);
         RefreshContent();
     }
 
     public void RecordCurrentReading()
     {
-        _logger.I(CreateCurrentReadingLogMessage());
+        _logger?.I(CreateCurrentReadingLogMessage());
     }
 
     public string CreateCurrentReadingLogMessage()
@@ -232,9 +277,9 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
         return $"({x}, {y})";
     }
 
-    private static string FormatHexColor(MediaColor color)
+    private string FormatHexColor(MediaColor color)
     {
-        return ScreenColorService.FormatHexColor(color);
+        return _screenColorService?.FormatHexColor(color) ?? "#FFFFFF";
     }
 
     private static string FormatRgbColor(MediaColor color)
@@ -242,9 +287,9 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
         return $"RGB({color.R}, {color.G}, {color.B})";
     }
 
-    private static MediaColor GetScreenColor(int x, int y)
+    private MediaColor GetScreenColor(int x, int y)
     {
-        return ScreenColorService.GetScreenColorOrDefault(x, y, Colors.White);
+        return _screenColorService?.GetScreenColorOrDefault(x, y, Colors.White) ?? Colors.White;
     }
 
     private void UpdatePopupPosition(int x, int y)

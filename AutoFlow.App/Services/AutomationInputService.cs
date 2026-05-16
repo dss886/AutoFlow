@@ -6,9 +6,15 @@ namespace AutoFlow.App.Services;
 public sealed class AutomationInputService
 {
     private const int DefaultClickHoldMilliseconds = 30;
+    private readonly ScreenColorService _screenColorService;
     private readonly object _syncRoot = new();
     private readonly HashSet<string> _pressedMouseButtons = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<ushort> _pressedKeys = new();
+
+    public AutomationInputService(ScreenColorService screenColorService)
+    {
+        _screenColorService = screenColorService ?? throw new ArgumentNullException(nameof(screenColorService));
+    }
 
     public void MoveMouse(int x, int y)
     {
@@ -17,7 +23,7 @@ public sealed class AutomationInputService
 
     public string GetScreenColorHex(int x, int y)
     {
-        return ScreenColorService.GetScreenColorHex(x, y);
+        return _screenColorService.GetScreenColorHex(x, y);
     }
 
     public void MouseDown(string button)

@@ -4,11 +4,11 @@ using MediaColor = System.Windows.Media.Color;
 
 namespace AutoFlow.App.Services;
 
-public static class ScreenColorService
+public sealed class ScreenColorService
 {
     private const uint ClrInvalid = 0xFFFFFFFF;
 
-    public static string GetScreenColorHex(int x, int y)
+    public string GetScreenColorHex(int x, int y)
     {
         if (!TryGetScreenColor(x, y, out var color))
         {
@@ -18,12 +18,12 @@ public static class ScreenColorService
         return FormatHexColor(color);
     }
 
-    public static MediaColor GetScreenColorOrDefault(int x, int y, MediaColor fallback)
+    public MediaColor GetScreenColorOrDefault(int x, int y, MediaColor fallback)
     {
         return TryGetScreenColor(x, y, out var color) ? color : fallback;
     }
 
-    public static bool TryGetScreenColor(int x, int y, out MediaColor color)
+    public bool TryGetScreenColor(int x, int y, out MediaColor color)
     {
         var desktopDc = GetDC(IntPtr.Zero);
         if (desktopDc == IntPtr.Zero)
@@ -53,7 +53,7 @@ public static class ScreenColorService
         }
     }
 
-    public static string FormatHexColor(MediaColor color)
+    public string FormatHexColor(MediaColor color)
     {
         return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
     }

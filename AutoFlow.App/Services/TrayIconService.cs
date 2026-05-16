@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using AutoFlow.App.Infrastructure;
 using System.Windows.Input;
 using AutoFlow.App.Styling;
 using DrawingFont = System.Drawing.Font;
@@ -9,6 +10,7 @@ using DrawingGraphicsUnit = System.Drawing.GraphicsUnit;
 using DrawingPoint = System.Drawing.Point;
 using DrawingSize = System.Drawing.Size;
 using Forms = System.Windows.Forms;
+using AutoFlow.App.Models;
 
 namespace AutoFlow.App.Services;
 
@@ -22,21 +24,25 @@ internal static class TrayMenuStyle
 
 internal sealed class TrayIconService : IDisposable
 {
+    private readonly IEventBus _eventBus;
+    private readonly IDisposable _trayInfoSubscription;
     private readonly Forms.NotifyIcon _notifyIcon;
     private readonly Icon _notifyIconImage;
     private readonly DrawingFont _notifyMenuFont;
+    private bool _isDisposed;
 
-    public static TrayIconService? Current { get; private set; }
-
-    public TrayIconService(ICommand openMainWindowCommand, ICommand exitApplicationCommand)
+    public TrayIconService(IEventBus eventBus)
     {
+        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        _trayInfoSubscription = _eventBus.Subscribe<TrayInfoRequestedMessage>(message =>
+            ShowInfo(message.Title, message.Message, message.TimeoutMilliseconds));
         _notifyMenuFont = new DrawingFont(AppMenuTokens.FontFamilyName, AppMenuTokens.TrayFontSize, DrawingFontStyle.Regular, DrawingGraphicsUnit.Point);
 
         var openMenuItem = CreateNotifyMenuItem("打开主窗口");
-        openMenuItem.Click += (_, _) => ExecuteCommand(openMainWindowCommand);
+        openMenuItem.Click += (_, _) => _eventBus.Publish(new ShowMainWindowRequestedMessage());
 
         var exitMenuItem = CreateNotifyMenuItem("退出程序");
-        exitMenuItem.Click += (_, _) => ExecuteCommand(exitApplicationCommand);
+        exitMenuItem.Click += (_, _) => _eventBus.Publish(new ExitApplicationRequestedMessage());
 
         var contextMenu = new RoundedContextMenuStrip
         {
@@ -65,20 +71,20 @@ internal sealed class TrayIconService : IDisposable
         {
             if (e.Button == Forms.MouseButtons.Left)
             {
-                ExecuteCommand(openMainWindowCommand);
+                _eventBus.Publish(new ShowMainWindowRequestedMessage());
             }
         };
-
-        Current = this;
     }
 
     public void Dispose()
     {
-        if (ReferenceEquals(Current, this))
+        if (_isDisposed)
         {
-            Current = null;
+            return;
         }
 
+        _isDisposed = true;
+        _trayInfoSubscription.Dispose();
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _notifyIconImage.Dispose();
@@ -114,16 +120,6 @@ internal sealed class TrayIconService : IDisposable
             var bottom = index == contextMenu.Items.Count - 1 ? AppMenuTokens.TrayContextMenuOuterPadding : 0;
             item.Margin = new Forms.Padding(AppMenuTokens.TrayContextMenuOuterPadding, top, AppMenuTokens.TrayContextMenuOuterPadding, bottom);
         }
-    }
-
-    private static void ExecuteCommand(ICommand command)
-    {
-        if (!command.CanExecute(null))
-        {
-            return;
-        }
-
-        command.Execute(null);
     }
 
     private static Icon LoadNotifyIcon()

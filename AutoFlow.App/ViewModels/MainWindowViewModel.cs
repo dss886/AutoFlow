@@ -9,18 +9,20 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using AutoFlow.App.Infrastructure;
 using AutoFlow.App.Models;
+using AutoFlow.App.Sessions;
 using AutoFlow.App.Services;
 
 namespace AutoFlow.App.ViewModels;
 
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly Action _closeWindow;
-    private readonly Action _openSettings;
+    private readonly IEventBus _eventBus;
     private readonly AppLoggerService _logger;
+    private readonly PathService _pathService;
     private readonly ScriptCatalogService _catalogService;
     private readonly ScriptRunnerService _runnerService;
-    private readonly InputRecordingSession _recordingSession = new();
+    private readonly InputRecordingSession _recordingSession;
+    private readonly List<IDisposable> _eventSubscriptions = [];
     private readonly FileSystemWatcher _fileSystemWatcher;
     private readonly DispatcherTimer _scriptRefreshTimer;
     private ScriptDefinition? _selectedScript;
@@ -31,17 +33,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isDisposed;
     private int _recordCountdownSeconds;
 
-    public MainWindowViewModel(Action closeWindow, Action openSettings)
+    public MainWindowViewModel(
+        PathService pathService,
+        ScreenColorService screenColorService,
+        ScriptCatalogService catalogService,
+        ScriptRunnerService runnerService,
+        IEventBus eventBus,
+        AppLoggerService logger)
     {
-        _logger = AppLoggerService.Instance;
-        _closeWindow = closeWindow ?? throw new ArgumentNullException(nameof(closeWindow));
-        _openSettings = openSettings ?? throw new ArgumentNullException(nameof(openSettings));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
+        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _runnerService = runnerService ?? throw new ArgumentNullException(nameof(runnerService));
+        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        _recordingSession = new InputRecordingSession(screenColorService ?? throw new ArgumentNullException(nameof(screenColorService)));
 
-        ScriptsDirectory = PathService.ResolveScriptsDirectory();
-        PathService.EnsureDirectory(ScriptsDirectory);
+        ScriptsDirectory = _pathService.ResolveScriptsDirectory();
+        _pathService.EnsureDirectory(ScriptsDirectory);
 
-        _catalogService = new ScriptCatalogService();
-        _runnerService = new ScriptRunnerService();
         _runnerService.ScriptStateChanged += RunnerService_OnScriptStateChanged;
 
         _scriptRefreshTimer = new DispatcherTimer
@@ -67,9 +76,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         DeleteScriptCommand = new RelayCommand<ScriptDefinition>(DeleteScript);
         RecordCommand = new RelayCommand(Record);
         ToggleScreenToolCommand = new RelayCommand(ToggleScreenTool);
-        OpenSettingsCommand = new RelayCommand(OpenSettings);
-        CloseWindowCommand = new RelayCommand(_closeWindow);
+        OpenSettingsCommand = new RelayCommand(RequestOpenSettingsWindow);
+        CloseWindowCommand = new RelayCommand(RequestCloseMainWindow);
 
+        SubscribeApplicationMessages();
         LoadScripts();
         _logger.V($"应用已启动，脚本目录: {ScriptsDirectory}");
     }
@@ -201,6 +211,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _recordCountdownCancellation?.Dispose();
         _recordCountdownCancellation = null;
         _isRecording = false;
+
+        foreach (var subscription in _eventSubscriptions)
+        {
+            subscription.Dispose();
+        }
+
+        _eventSubscriptions.Clear();
+    }
+
+    private void SubscribeApplicationMessages()
+    {
+        _eventSubscriptions.Add(_eventBus.Subscribe<RunRequestedMessage>(_ => ExecuteRunCommand()));
+        _eventSubscriptions.Add(_eventBus.Subscribe<StopRequestedMessage>(_ => ExecuteStopCommand()));
+        _eventSubscriptions.Add(_eventBus.Subscribe<RecordRequestedMessage>(_ => ExecuteRecordCommand()));
+        _eventSubscriptions.Add(_eventBus.Subscribe<ScreenToolToggleRequestedMessage>(_ => ExecuteToggleScreenToolCommand()));
+        _eventSubscriptions.Add(_eventBus.Subscribe<KeyboardInputObservedMessage>(message =>
+            HandleObservedKeyboardInput(message.Key, message.IsKeyDown)));
+        _eventSubscriptions.Add(_eventBus.Subscribe<MouseButtonObservedMessage>(message =>
+            HandleObservedMouseInput(message.Button, message.IsButtonDown, message.X, message.Y)));
     }
 
     private void ToggleRunState()
@@ -220,9 +249,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _ = RunSelectedScriptAsync();
     }
 
-    private void OpenSettings()
+    private void RequestOpenSettingsWindow()
     {
-        _openSettings();
+        _eventBus.Publish(new ToggleSettingsWindowRequestedMessage());
+    }
+
+    private void RequestCloseMainWindow()
+    {
+        _eventBus.Publish(new CloseMainWindowRequestedMessage());
     }
 
     private async Task RunSelectedScriptAsync()
@@ -349,7 +383,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        var reading = InputRecordingSession.CaptureCursorReading();
+        var reading = _recordingSession.CaptureCursorReading();
         _logger.D($"{FormatKeyboardLogPrefix(key, isKeyDown)}，{reading.ToLogMessage()}");
     }
 
@@ -360,7 +394,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        _logger.D($"{FormatMouseLogPrefix(button, isButtonDown)}，{InputRecordingSession.CreateReadingLogMessage(x, y)}");
+        _logger.D($"{FormatMouseLogPrefix(button, isButtonDown)}，{_recordingSession.CreateReadingLogMessage(x, y)}");
     }
 
     private void LoadScripts()
@@ -552,7 +586,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 string.Equals(item.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
 
             _logger.V($"录制已完成，脚本已保存为: {fileName}");
-            TrayIconService.Current?.ShowInfo("AutoFlow 录制完成", $"脚本已保存到 Scripts：{fileName}");
+            _eventBus.Publish(new TrayInfoRequestedMessage("AutoFlow 录制完成", $"脚本已保存到 Scripts：{fileName}"));
         }
         catch (Exception ex)
         {

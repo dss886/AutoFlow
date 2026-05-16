@@ -3,14 +3,20 @@ using System.Text;
 
 namespace AutoFlow.App.Services;
 
-public static class ExceptionLogService
+public sealed class ExceptionLogService
 {
     private static readonly object SyncRoot = new();
+    private readonly PathService _pathService;
 
-    public static string LogException(string source, Exception exception)
+    public ExceptionLogService(PathService pathService)
     {
-        var logsDirectory = PathService.ResolveLogsDirectory();
-        PathService.EnsureDirectory(logsDirectory);
+        _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
+    }
+
+    public string LogException(string source, Exception exception)
+    {
+        var logsDirectory = _pathService.ResolveLogsDirectory();
+        _pathService.EnsureDirectory(logsDirectory);
 
         var logFilePath = Path.Combine(logsDirectory, $"automation-host-{DateTime.Now:yyyyMMdd}.log");
         var builder = new StringBuilder();

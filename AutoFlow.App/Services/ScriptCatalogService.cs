@@ -5,9 +5,16 @@ namespace AutoFlow.App.Services;
 
 public sealed class ScriptCatalogService
 {
+    private readonly PathService _pathService;
+
+    public ScriptCatalogService(PathService pathService)
+    {
+        _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
+    }
+
     public IReadOnlyList<ScriptDefinition> LoadScripts(string scriptsDirectory)
     {
-        PathService.EnsureDirectory(scriptsDirectory);
+        _pathService.EnsureDirectory(scriptsDirectory);
 
         var scripts = new List<ScriptDefinition>();
         foreach (var filePath in Directory

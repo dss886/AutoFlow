@@ -7,18 +7,15 @@ namespace AutoFlow.App.Services;
 public sealed class AppLoggerService
 {
     private const int MaxLogLineCount = 3000;
-    private static readonly Lazy<AppLoggerService> _lazyInstance = new(() => new AppLoggerService());
 
     private readonly Dispatcher _dispatcher;
     private readonly ObservableCollection<AppLogEntry> _entries = new();
 
-    private AppLoggerService()
+    public AppLoggerService()
     {
         _dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         Entries = new ReadOnlyObservableCollection<AppLogEntry>(_entries);
     }
-
-    public static AppLoggerService Instance => _lazyInstance.Value;
 
     public ReadOnlyObservableCollection<AppLogEntry> Entries { get; }
 

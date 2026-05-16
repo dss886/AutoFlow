@@ -1,16 +1,17 @@
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Threading;
 using AutoFlow.App.Infrastructure;
+using AutoFlow.App.Models;
 using AutoFlow.App.Services;
+using AutoFlow.App.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoFlow.App;
 
 public partial class App : System.Windows.Application
 {
-    private TrayIconService? _trayIconService;
-    private ICommand? _showMainWindowCommand;
-    private ICommand? _exitApplicationCommand;
+    private ServiceProvider? _serviceProvider;
+    private readonly List<IDisposable> _eventSubscriptions = [];
 
     public App()
     {
@@ -25,10 +26,11 @@ public partial class App : System.Windows.Application
 
         try
         {
-            var window = new MainWindow();
-            _showMainWindowCommand = new RelayCommand(() => ShowMainWindow(window));
-            _exitApplicationCommand = new RelayCommand(() => ExitApplication(window));
-            _trayIconService = new TrayIconService(_showMainWindowCommand, _exitApplicationCommand);
+            _serviceProvider = CreateServiceProvider();
+            var eventBus = _serviceProvider.GetRequiredService<IEventBus>();
+            var window = _serviceProvider.GetRequiredService<MainWindow>();
+            _ = _serviceProvider.GetRequiredService<TrayIconService>();
+            SubscribeApplicationMessages(eventBus, window);
             MainWindow = window;
             window.Show();
         }
@@ -46,10 +48,46 @@ public partial class App : System.Windows.Application
             window.PrepareForExit();
         }
 
-        _trayIconService?.Dispose();
-        _trayIconService = null;
+        foreach (var subscription in _eventSubscriptions)
+        {
+            subscription.Dispose();
+        }
+
+        _eventSubscriptions.Clear();
+        _serviceProvider?.Dispose();
+        _serviceProvider = null;
 
         base.OnExit(e);
+    }
+
+    private static ServiceProvider CreateServiceProvider()
+    {
+        var services = new ServiceCollection();
+        // Services
+        services.AddSingleton<AppLoggerService>();
+        services.AddSingleton<AutomationInputService>();
+        services.AddSingleton<ExceptionLogService>();
+        services.AddSingleton<GlobalHotkeyService>();
+        services.AddSingleton<GlobalMouseHookService>();
+        services.AddSingleton<LocalSettingsService>();
+        services.AddSingleton<LuaRuntimeService>();
+        services.AddSingleton<PathService>();
+        services.AddSingleton<ScreenColorService>();
+        services.AddSingleton<ScriptCatalogService>();
+        services.AddSingleton<ScriptRunnerService>();
+        services.AddSingleton<TrayIconService>();
+        services.AddSingleton<WindowControlService>();
+        // Utils and view models
+        services.AddSingleton<IEventBus, EventBus>();
+        services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<MainWindow>();
+        return services.BuildServiceProvider();
+    }
+
+    private void SubscribeApplicationMessages(IEventBus eventBus, MainWindow window)
+    {
+        _eventSubscriptions.Add(eventBus.Subscribe<ShowMainWindowRequestedMessage>(_ => ShowMainWindow(window)));
+        _eventSubscriptions.Add(eventBus.Subscribe<ExitApplicationRequestedMessage>(_ => ExitApplication(window)));
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
@@ -78,9 +116,9 @@ public partial class App : System.Windows.Application
         e.SetObserved();
     }
 
-    private static void HandleFatalException(string source, Exception exception)
+    private void HandleFatalException(string source, Exception exception)
     {
-        var logFilePath = ExceptionLogService.LogException(source, exception);
+        var logFilePath = GetExceptionLogService().LogException(source, exception);
         System.Windows.MessageBox.Show(
             $"程序发生未处理异常，已写入日志文件：\n{logFilePath}\n\n{exception.Message}",
             "AutoFlow 启动异常",
@@ -88,14 +126,24 @@ public partial class App : System.Windows.Application
             MessageBoxImage.Error);
     }
 
-    private static void HandleNonFatalException(string source, Exception exception)
+    private void HandleNonFatalException(string source, Exception exception)
     {
-        var logFilePath = ExceptionLogService.LogException(source, exception);
+        var logFilePath = GetExceptionLogService().LogException(source, exception);
         System.Windows.MessageBox.Show(
             $"后台任务发生异常，已写入日志文件：\n{logFilePath}\n\n{exception.Message}",
             "AutoFlow 后台异常",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
+    }
+
+    private ExceptionLogService GetExceptionLogService()
+    {
+        if (_serviceProvider is not null)
+        {
+            return _serviceProvider.GetRequiredService<ExceptionLogService>();
+        }
+
+        return new ExceptionLogService(new PathService());
     }
 
     private void ShowMainWindow(MainWindow window)

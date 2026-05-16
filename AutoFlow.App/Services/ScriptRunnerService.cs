@@ -5,13 +5,13 @@ namespace AutoFlow.App.Services;
 public sealed class ScriptRunnerService
 {
     private readonly AppLoggerService _logger;
-    private readonly LuaAutomationRuntime _runtime;
+    private readonly LuaRuntimeService _runtime;
     private CancellationTokenSource? _currentRunCts;
 
-    public ScriptRunnerService()
+    public ScriptRunnerService(LuaRuntimeService runtime, AppLoggerService logger)
     {
-        _logger = AppLoggerService.Instance;
-        _runtime = new LuaAutomationRuntime();
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public bool IsRunning => RunningScript is not null;

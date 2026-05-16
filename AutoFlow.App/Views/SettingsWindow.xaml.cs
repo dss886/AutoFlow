@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using AutoFlow.App.Infrastructure;
 using AutoFlow.App.Models;
 using AutoFlow.App.Services;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -12,19 +13,22 @@ namespace AutoFlow.App.Views;
 
 public partial class SettingsWindow : Window
 {
-    private readonly AppLoggerService _logger = AppLoggerService.Instance;
+    private readonly IEventBus _eventBus;
+    private readonly AppLoggerService _logger;
+    private readonly LocalSettingsService _localSettingsService;
     private ShortcutBindingItem? _capturingItem;
 
-    public SettingsWindow()
+    public SettingsWindow(IEventBus eventBus, AppLoggerService logger, LocalSettingsService localSettingsService)
     {
+        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _localSettingsService = localSettingsService ?? throw new ArgumentNullException(nameof(localSettingsService));
         InitializeComponent();
-        Bindings = CreateBindings(LocalSettingsService.LoadHotkeySettings());
+        Bindings = CreateBindings(_localSettingsService.LoadHotkeySettings());
         DataContext = this;
     }
 
     public ObservableCollection<ShortcutBindingItem> Bindings { get; }
-
-    public event Action? HotkeysChanged;
 
     private void RebindButton_OnClick(object sender, RoutedEventArgs e)
     {
@@ -136,14 +140,14 @@ public partial class SettingsWindow : Window
         }
 
         item.Shortcut = shortcut;
-        LocalSettingsService.SaveHotkeySettings(new AppHotkeySettings
+        _localSettingsService.SaveHotkeySettings(new AppHotkeySettings
         {
             Run = GetShortcut(ShortcutBindingKey.Run),
             Stop = GetShortcut(ShortcutBindingKey.Stop),
             Record = GetShortcut(ShortcutBindingKey.Record),
             ScreenTool = GetShortcut(ShortcutBindingKey.ScreenTool),
         });
-        HotkeysChanged?.Invoke();
+        _eventBus.Publish(new HotkeysReloadRequestedMessage());
         return true;
     }
 

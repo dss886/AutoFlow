@@ -4,12 +4,14 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media;
+using AutoFlow.App.Infrastructure;
+using AutoFlow.App.Models;
 using AutoFlow.App.Views;
 using Point = System.Windows.Point;
 
 namespace AutoFlow.App.Services;
 
-public sealed class WindowControlService
+public sealed class WindowControlService : IDisposable
 {
     private const int MinimumVisibleWidth = 100;
     private const int MinimumVisibleHeight = 60;
@@ -17,28 +19,61 @@ public sealed class WindowControlService
     private const uint SwpNoActivate = 0x0010;
     private const double SettingsWindowGap = 16;
 
-    private readonly Window _mainWindow;
+    private readonly IEventBus _eventBus;
+    private readonly AppLoggerService _logger;
+    private readonly LocalSettingsService _localSettingsService;
+    private readonly IDisposable _toggleSettingsSubscription;
+    private readonly IDisposable _closeMainWindowSubscription;
+    private Window? _mainWindow;
     private bool _allowExit;
     private bool _isSettingsWindowOnLeft;
     private SettingsWindow? _settingsWindow;
 
-    public WindowControlService(Window mainWindow)
+    public WindowControlService(IEventBus eventBus, AppLoggerService logger, LocalSettingsService localSettingsService)
     {
-        _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
-
-        _mainWindow.LocationChanged += (_, _) => UpdateSettingsWindowBounds();
-        _mainWindow.SizeChanged += (_, _) => UpdateSettingsWindowBounds();
+        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _localSettingsService = localSettingsService ?? throw new ArgumentNullException(nameof(localSettingsService));
+        _toggleSettingsSubscription = _eventBus.Subscribe<ToggleSettingsWindowRequestedMessage>(_ => ToggleSettingsWindow());
+        _closeMainWindowSubscription = _eventBus.Subscribe<CloseMainWindowRequestedMessage>(_ => RequestCloseMainWindow());
     }
 
-    public event Action? HotkeysChanged;
+    public void Initialize(Window mainWindow)
+    {
+        ArgumentNullException.ThrowIfNull(mainWindow);
+
+        if (ReferenceEquals(_mainWindow, mainWindow))
+        {
+            return;
+        }
+
+        if (_mainWindow is not null)
+        {
+            throw new InvalidOperationException("WindowControlService 已初始化。");
+        }
+
+        _mainWindow = mainWindow;
+        _mainWindow.LocationChanged += MainWindow_OnLayoutChanged;
+        _mainWindow.SizeChanged += MainWindow_OnLayoutChanged;
+    }
 
     public void ApplyStartupPlacement()
     {
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
         Apply(_mainWindow);
     }
 
     public bool HandleMainWindowClosing()
     {
+        if (_mainWindow is null)
+        {
+            return false;
+        }
+
         Save(_mainWindow);
 
         if (_allowExit)
@@ -54,6 +89,11 @@ public sealed class WindowControlService
 
     public void ToggleSettingsWindow()
     {
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
         if (_settingsWindow is { IsVisible: true })
         {
             CloseSettingsWindow();
@@ -68,11 +108,10 @@ public sealed class WindowControlService
             return;
         }
 
-        _settingsWindow = new SettingsWindow()
+        _settingsWindow = new SettingsWindow(_eventBus, _logger, _localSettingsService)
         {
             Owner = _mainWindow,
         };
-        _settingsWindow.HotkeysChanged += SettingsWindow_OnHotkeysChanged;
         _settingsWindow.Closed += SettingsWindow_OnClosed;
 
         _isSettingsWindowOnLeft = ShouldOpenSettingsWindowOnLeft(_settingsWindow.Width);
@@ -86,6 +125,25 @@ public sealed class WindowControlService
         _allowExit = true;
     }
 
+    public void Dispose()
+    {
+        CloseSettingsWindow();
+        if (_mainWindow is not null)
+        {
+            _mainWindow.LocationChanged -= MainWindow_OnLayoutChanged;
+            _mainWindow.SizeChanged -= MainWindow_OnLayoutChanged;
+            _mainWindow = null;
+        }
+
+        _toggleSettingsSubscription.Dispose();
+        _closeMainWindowSubscription.Dispose();
+    }
+
+    private void MainWindow_OnLayoutChanged(object? sender, EventArgs e)
+    {
+        UpdateSettingsWindowBounds();
+    }
+
     private void CloseSettingsWindow()
     {
         if (_settingsWindow is null)
@@ -93,22 +151,20 @@ public sealed class WindowControlService
             return;
         }
 
-        _settingsWindow.HotkeysChanged -= SettingsWindow_OnHotkeysChanged;
         _settingsWindow.Closed -= SettingsWindow_OnClosed;
         _settingsWindow.Close();
         _settingsWindow = null;
     }
 
-    private void SettingsWindow_OnHotkeysChanged()
+    private void RequestCloseMainWindow()
     {
-        HotkeysChanged?.Invoke();
+        _mainWindow?.Close();
     }
 
     private void SettingsWindow_OnClosed(object? sender, EventArgs e)
     {
         if (_settingsWindow is not null)
         {
-            _settingsWindow.HotkeysChanged -= SettingsWindow_OnHotkeysChanged;
             _settingsWindow.Closed -= SettingsWindow_OnClosed;
             _settingsWindow = null;
         }
@@ -116,7 +172,7 @@ public sealed class WindowControlService
 
     private void UpdateSettingsWindowBounds()
     {
-        if (_settingsWindow is null)
+        if (_settingsWindow is null || _mainWindow is null)
         {
             return;
         }
@@ -132,6 +188,11 @@ public sealed class WindowControlService
 
     private bool ShouldOpenSettingsWindowOnLeft(double settingsWidth)
     {
+        if (_mainWindow is null)
+        {
+            return false;
+        }
+
         var handle = new WindowInteropHelper(_mainWindow).Handle;
         var screen = Screen.FromHandle(handle);
         var workingArea = screen.WorkingArea;
@@ -158,7 +219,7 @@ public sealed class WindowControlService
             && preferredLeft >= workingAreaDip.Left;
     }
 
-    private static void Apply(Window window)
+    private void Apply(Window window)
     {
         var handle = new WindowInteropHelper(window).Handle;
         if (handle == IntPtr.Zero)
@@ -179,7 +240,7 @@ public sealed class WindowControlService
             SwpNoZOrder | SwpNoActivate);
     }
 
-    private static void Save(Window window)
+    private void Save(Window window)
     {
         try
         {
@@ -200,7 +261,7 @@ public sealed class WindowControlService
                 bounds.Top,
                 bounds.Width,
                 bounds.Height);
-            LocalSettingsService.SaveWindowPlacement(placement);
+            _localSettingsService.SaveWindowPlacement(placement);
         }
         catch
         {
@@ -208,11 +269,11 @@ public sealed class WindowControlService
         }
     }
 
-    private static Rectangle? LoadBounds()
+    private Rectangle? LoadBounds()
     {
         try
         {
-            var placement = LocalSettingsService.LoadWindowPlacement();
+            var placement = _localSettingsService.LoadWindowPlacement();
             if (placement is null)
             {
                 return null;
@@ -232,7 +293,7 @@ public sealed class WindowControlService
         }
     }
 
-    private static Rectangle ResolveStartupBounds(Rectangle defaultBounds)
+    private Rectangle ResolveStartupBounds(Rectangle defaultBounds)
     {
         var savedBounds = LoadBounds();
         if (savedBounds is not null && IsVisibleOnAnyScreen(savedBounds.Value))
