@@ -19,7 +19,8 @@ public sealed class ScriptCatalogService
         var scripts = new List<ScriptDefinition>();
         foreach (var filePath in Directory
                      .EnumerateFiles(scriptsDirectory, "*.lua", SearchOption.TopDirectoryOnly)
-                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+                     .OrderByDescending(File.GetLastWriteTimeUtc)
+                     .ThenBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
             var script = TryReadScriptMetadata(filePath);
             if (script is not null)
