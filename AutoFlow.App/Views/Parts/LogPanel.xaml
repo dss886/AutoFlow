@@ -23,6 +23,14 @@
                              IsReadOnly="True"
                              HorizontalScrollBarVisibility="Auto"
                              VerticalScrollBarVisibility="Auto">
+                    <RichTextBox.ContextMenu>
+                        <ContextMenu Style="{StaticResource AppContextMenuStyle}">
+                            <MenuItem Header="复制"
+                                      Command="ApplicationCommands.Copy"
+                                      CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      Style="{StaticResource AppContextMenuItemStyle}" />
+                        </ContextMenu>
+                    </RichTextBox.ContextMenu>
                     <RichTextBox.Resources>
                         <Style TargetType="ScrollBar"
                                BasedOn="{StaticResource LogOutputScrollBarStyle}" />
