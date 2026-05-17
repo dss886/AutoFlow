@@ -72,16 +72,43 @@ $vpkArgs = @(
     "--packId", "AutoFlow",
     "--packVersion", $version,
     "--packDir", $publishDir,
+    "--outputDir", $publishDir,
     "--mainExe", "AutoFlow.exe",
     "--packTitle", "AutoFlow",
-    "--channel", $Channel
+    "--channel", $Channel,
+    "--noInst"
 )
-$result = & $vpkExe @vpkArgs 2>&1
+Write-Host "      Running: $vpkExe $($vpkArgs -join ' ')"
+& $vpkExe @vpkArgs 2>&1 | ForEach-Object { Write-Host "      $_" }
 if ($LASTEXITCODE -ne 0) {
-    Write-Host $result
     throw "vpk pack failed with exit code $LASTEXITCODE"
 }
+
+$releasesFile = Join-Path $publishDir "RELEASES"
+$nupkgFiles = Get-ChildItem -Path $publishDir -Filter "AutoFlow-*.nupkg" -ErrorAction SilentlyContinue
+$deltaFiles = Get-ChildItem -Path $publishDir -Filter "AutoFlow-*.delta" -ErrorAction SilentlyContinue
+
+if (-not (Test-Path $releasesFile)) {
+    throw "RELEASES file was not generated. Check vpk output above."
+}
+if (-not $nupkgFiles -or $nupkgFiles.Count -eq 0) {
+    throw "No .nupkg file was generated. Check vpk output above."
+}
+
+Write-Host ""
+Write-Host "      Generated files:"
+Write-Host "        - RELEASES"
+foreach ($file in $nupkgFiles) { Write-Host "        - $($file.Name)" }
+foreach ($file in $deltaFiles) { Write-Host "        - $($file.Name)" }
 Write-Host "      Done."
+
+$renamedExe = "AutoFlow-v$version-$Runtime.exe"
+$renamedExePath = Join-Path $publishDir $renamedExe
+if (Test-Path $renamedExePath) { Remove-Item -Force $renamedExePath }
+Rename-Item -Path $exePath -NewName $renamedExe
+$exePath = $renamedExePath
+Write-Host ""
+Write-Host "      Renamed: AutoFlow.exe -> $renamedExe"
 
 $exeSize = 0
 if (Test-Path $exePath) {
@@ -97,9 +124,5 @@ Write-Host "  EXE     : $exePath ($exeSize MB)"
 Write-Host "  Channel : $Channel"
 Write-Host "============================================"
 Write-Host ""
-Write-Host "  Velopack outputs in: $publishDir"
-Write-Host "  Upload the following to GitHub Releases:"
-Write-Host "    - RELEASES"
-Write-Host "    - AutoFlow-*.nupkg"
-Write-Host "    - AutoFlow-*.delta (if exists)"
+Write-Host "  Nupkg files ready in: $publishDir"
 Write-Host "============================================"

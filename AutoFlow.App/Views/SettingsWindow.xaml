@@ -29,6 +29,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid>
@@ -54,7 +55,7 @@
                 <Image Width="12"
                        Height="12"
                        IsHitTestVisible="False"
-                       Source="{svgc:SvgImage Source=/Assets/Icons/Close.svg, AppName=AutoFlow.App}" />
+                       Source="{svgc:SvgImage Source=/Assets/Icons/Close.svg, AppName=AutoFlow}" />
             </Button>
         </Grid>
 
@@ -90,7 +91,7 @@
                                         <Image Width="12"
                                                Height="12"
                                                IsHitTestVisible="False"
-                                               Source="{svgc:SvgImage Source=/Assets/Icons/Refresh.svg, AppName=AutoFlow.App}" />
+                                               Source="{svgc:SvgImage Source=/Assets/Icons/Refresh.svg, AppName=AutoFlow}" />
                                     </Button>
                                     <Button Width="160"
                                             Click="RebindButton_OnClick"
@@ -104,5 +105,12 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <TextBlock Grid.Row="2"
+                   Margin="0,8,0,10"
+                   HorizontalAlignment="Center"
+                   FontSize="11"
+                   Foreground="{StaticResource BrushWhite38}"
+                   Text="{Binding VersionDisplay}" />
     </Grid>
 </Window>

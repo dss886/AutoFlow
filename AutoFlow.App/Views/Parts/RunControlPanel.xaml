@@ -30,12 +30,12 @@
                         <Style TargetType="Button"
                                BasedOn="{StaticResource AppButtonPrimaryStyle}">
                             <Setter Property="Tag"
-                                    Value="{svgc:SvgImage Source=/Assets/Icons/Play.svg, AppName=AutoFlow.App}" />
+                                    Value="{svgc:SvgImage Source=/Assets/Icons/Play.svg, AppName=AutoFlow}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsScriptRunning}"
                                              Value="True">
                                     <Setter Property="Tag"
-                                            Value="{svgc:SvgImage Source=/Assets/Icons/Pause.svg, AppName=AutoFlow.App}" />
+                                            Value="{svgc:SvgImage Source=/Assets/Icons/Pause.svg, AppName=AutoFlow}" />
                                     <Setter Property="Background"
                                             Value="{StaticResource BrushPrimaryWarning}" />
                                     <Setter Property="BorderBrush"
@@ -49,7 +49,7 @@
                         Margin="0,0,12,0"
                         Command="{Binding RecordCommand}"
                         Content="{Binding RecordButtonText, FallbackValue=录制, TargetNullValue=录制}"
-                        Tag="{svgc:SvgImage Source=/Assets/Icons/Record.svg, AppName=AutoFlow.App}"
+                        Tag="{svgc:SvgImage Source=/Assets/Icons/Record.svg, AppName=AutoFlow}"
                         ContentTemplate="{StaticResource AppButtonWithIconTemplate}"
                         Style="{StaticResource AppButtonDangerStyle}" />
                 <Button Width="88"

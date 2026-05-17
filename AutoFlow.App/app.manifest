@@ -3,7 +3,6 @@
           manifestVersion="1.0"
           xmlns:asmv2="urn:schemas-microsoft-com:asm.v2"
           xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-  <assemblyIdentity version="1.0.0.0" name="AutoFlow.App.app" />
   <asmv2:trustInfo>
     <asmv2:security>
       <asmv3:requestedPrivileges>

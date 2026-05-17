@@ -70,7 +70,7 @@
 
 ### 下载运行
 
-从 [Releases](https://github.com/dss886/AutoFlow/releases) 页面下载最新的 `AutoFlow_win-x64.zip`，解压后双击 `AutoFlow.exe` 即可运行。
+从 [Releases](https://github.com/dss886/AutoFlow/releases) 页面下载最新的 `AutoFlow_win-x64.zip`，解压后双击 `AutoFlow-win-x64.exe` 即可运行。
 
 > 💡 程序第一次运行会在程序同级目录下自动创建 `scripts/` 目录和演示脚本。
 
@@ -92,7 +92,7 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 
 本项目使用 [MinVer](https://github.com/adamralph/minver) 自动管理版本号，使用 [Velopack](https://github.com/velopack/velopack) 打包并支持自动更新。
 
-版本号由 Git Tag 自动决定，无需手动维护。开发过程中调试版本的格式为 `1.0.1-beta.3`（最近 tag 为 `v1.0.0` 时）。
+版本号由 Git Tag 自动决定，无需手动维护。
 
 #### 本地打包
 
@@ -124,8 +124,6 @@ git push origin v1.0.0-beta.1
 ```
 
 CI 会自动完成：构建 → Velopack 打包 → 上传到 GitHub Release。客户端下次启动时将自动检测并提示更新。
-
-> ⚠️ 发布前请在 `App.xaml.cs` 中将 `UpdateUrl` 中的 `YOUR_USERNAME` 替换为你的 GitHub 用户名。
 
 ## 📖 Lua API 参考
 

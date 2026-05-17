@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -29,6 +30,24 @@ public partial class SettingsWindow : Window
     }
 
     public ObservableCollection<ShortcutBindingItem> Bindings { get; }
+
+    public string VersionDisplay => $"v{CurrentVersion}"
+#if DEBUG
+        + "-debug"
+#endif
+        ;
+
+    private static string CurrentVersion
+    {
+        get
+        {
+            var infoVersion = Assembly.GetEntryAssembly()?
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? "0.0.1";
+            var plusIndex = infoVersion.IndexOf('+');
+            return plusIndex >= 0 ? infoVersion[..plusIndex] : infoVersion;
+        }
+    }
 
     private void RebindButton_OnClick(object sender, RoutedEventArgs e)
     {

@@ -12,6 +12,7 @@
     <ApplicationIcon>Assets\Icons\AppIcon.ico</ApplicationIcon>
     <DefaultItemExcludes>$(DefaultItemExcludes);.temp\**;publish\**</DefaultItemExcludes>
     <MinVerDefaultPreReleaseIdentifiers>beta</MinVerDefaultPreReleaseIdentifiers>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
   </PropertyGroup>
 
   <PropertyGroup>
