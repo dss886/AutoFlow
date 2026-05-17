@@ -1,7 +1,8 @@
 param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
-    [string]$OutputDir = "publish"
+    [string]$OutputDir = "publish",
+    [string]$Channel = "win"
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,27 +11,35 @@ $projectDir = Join-Path $scriptDir "AutoFlow.App"
 $publishDir = Join-Path $scriptDir $OutputDir
 
 Write-Host "============================================"
-Write-Host "AutoFlow Publish Script"
+Write-Host "AutoFlow Publish Script (Velopack)"
 Write-Host "Configuration: $Configuration"
 Write-Host "Runtime:       $Runtime"
+Write-Host "Channel:       $Channel"
 Write-Host "============================================"
 
 Write-Host ""
-Write-Host "[1/4] Cleaning previous output..."
+Write-Host "[1/5] Installing vpk tool..."
+$vpkToolsDir = Join-Path $scriptDir "vpk-tools"
+if (Test-Path $vpkToolsDir) { Remove-Item -Recurse -Force $vpkToolsDir }
+dotnet tool install vpk --tool-path $vpkToolsDir --version 0.0.1298 --framework net8.0
+Write-Host "      Done."
+
+Write-Host ""
+Write-Host "[2/5] Cleaning previous output..."
 if (Test-Path $publishDir) {
     Remove-Item -Recurse -Force $publishDir
 }
 Write-Host "      Done."
 
 Write-Host ""
-Write-Host "[2/4] Cleaning build artifacts..."
+Write-Host "[3/5] Cleaning build artifacts..."
 dotnet clean $projectDir -c $Configuration -r $Runtime --nologo -v q 2>&1 | Out-Null
-$tempDir = Join-Path $projectDir "temp"
+$tempDir = Join-Path $projectDir ".temp"
 if (Test-Path $tempDir) { Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue }
 Write-Host "      Done."
 
 Write-Host ""
-Write-Host "[3/4] Publishing (SCD + SingleFile + ReadyToRun)..."
+Write-Host "[4/5] Publishing (SCD + SingleFile + ReadyToRun)..."
 $publishArgs = @(
     "publish", $projectDir,
     "-c", $Configuration,
@@ -42,22 +51,39 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host $result
     throw "dotnet publish failed with exit code $LASTEXITCODE"
 }
-Write-Host "      Done."
 
-$publishName = "AutoFlow_$Runtime"
+$exePath = Join-Path $publishDir "AutoFlow.exe"
+$version = (Get-Command $exePath -ErrorAction SilentlyContinue).FileVersionInfo.ProductVersion
+if (-not $version) {
+    $version = "0.0.1"
+}
+$version = $version -replace '\+.*$', ''
+if ($version.StartsWith('0.0.0')) {
+    $version = '0.0.1' + $version.Substring(5)
+}
+Write-Host "      Version: $version"
+Write-Host "      Done."
 
 Write-Host ""
-Write-Host "[4/4] Creating ZIP package..."
-$zipFile = Join-Path $publishDir "$publishName.zip"
-if (Test-Path $zipFile) {
-    Remove-Item -Force $zipFile
+Write-Host "[5/5] Creating Velopack release package..."
+$vpkExe = Join-Path $vpkToolsDir "vpk.exe"
+$vpkArgs = @(
+    "pack",
+    "--packId", "AutoFlow",
+    "--packVersion", $version,
+    "--packDir", $publishDir,
+    "--mainExe", "AutoFlow.exe",
+    "--packTitle", "AutoFlow",
+    "--channel", $Channel
+)
+$result = & $vpkExe @vpkArgs 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host $result
+    throw "vpk pack failed with exit code $LASTEXITCODE"
 }
-Compress-Archive -Path "$publishDir\*" -DestinationPath $zipFile
 Write-Host "      Done."
 
-$zipSize = [math]::Round((Get-Item $zipFile).Length / 1MB, 2)
 $exeSize = 0
-$exePath = Join-Path $publishDir "AutoFlow.exe"
 if (Test-Path $exePath) {
     $exeSize = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
 }
@@ -66,6 +92,14 @@ Write-Host ""
 Write-Host "============================================"
 Write-Host "  Publish completed successfully!"
 Write-Host "============================================"
-Write-Host "  EXE : $exePath ($exeSize MB)"
-Write-Host "  ZIP : $zipFile ($zipSize MB)"
+Write-Host "  Version : $version"
+Write-Host "  EXE     : $exePath ($exeSize MB)"
+Write-Host "  Channel : $Channel"
+Write-Host "============================================"
+Write-Host ""
+Write-Host "  Velopack outputs in: $publishDir"
+Write-Host "  Upload the following to GitHub Releases:"
+Write-Host "    - RELEASES"
+Write-Host "    - AutoFlow-*.nupkg"
+Write-Host "    - AutoFlow-*.delta (if exists)"
 Write-Host "============================================"

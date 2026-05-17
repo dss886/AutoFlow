@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version override (e.g. 1.2.3)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install vpk tool
+        run: dotnet tool install vpk --tool-path ./vpk-tools --version 0.0.1298
+
+      - name: Publish app
+        run: dotnet publish AutoFlow.App/AutoFlow.App.csproj -c Release -r win-x64 -o publish/win-x64
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ inputs.version }}" -ne "") {
+            $ver = "${{ inputs.version }}"
+          } else {
+            $exe = Get-Item publish/win-x64/AutoFlow.exe -ErrorAction SilentlyContinue
+            if ($exe) {
+              $ver = $exe.VersionInfo.ProductVersion
+            } else {
+              $ver = "0.0.1"
+            }
+          }
+          if (-not $ver) { $ver = "0.0.1" }
+          $ver = $ver -replace '\+.*$', ''
+          if ($ver.StartsWith('0.0.0')) {
+            $ver = '0.0.1' + $ver.Substring(5)
+          }
+          echo "value=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Velopack pack
+        run: >
+          ./vpk-tools/vpk pack
+          --packId AutoFlow
+          --packVersion ${{ steps.version.outputs.value }}
+          --packDir publish/win-x64
+          --mainExe AutoFlow.exe
+          --packTitle AutoFlow
+          --channel win
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          files: |
+            publish/win-x64/RELEASES
+            publish/win-x64/AutoFlow-*.nupkg
+            publish/win-x64/AutoFlow-*.delta
+          fail_on_unmatched_files: false
+          generate_release_notes: true
