@@ -114,32 +114,6 @@ public sealed class LocalSettingsService
         }
     }
 
-    public bool LoadDemoScriptsInitialized()
-    {
-        try
-        {
-            return LoadSettings().DemoScriptsInitialized;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    public void SaveDemoScriptsInitialized()
-    {
-        try
-        {
-            var settings = LoadSettings();
-            settings.DemoScriptsInitialized = true;
-            SaveSettings(settings);
-        }
-        catch
-        {
-            // Keep the app usable even if local settings cannot be written.
-        }
-    }
-
     private LocalSettings LoadSettings()
     {
         var settingsFilePath = GetSettingsFilePath();
@@ -171,8 +145,6 @@ public sealed class LocalSettingsService
         public LocalWindowPlacement? WindowPlacement { get; set; }
 
         public HotkeySettings? Hotkeys { get; set; }
-
-        public bool DemoScriptsInitialized { get; set; }
     }
 
     private sealed class ScreenToolSettings

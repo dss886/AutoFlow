@@ -110,9 +110,19 @@ $exePath = $renamedExePath
 Write-Host ""
 Write-Host "      Renamed: AutoFlow.exe -> $renamedExe"
 
+$zipName = "AutoFlow-v$version-$Runtime.zip"
+$zipPath = Join-Path $publishDir $zipName
+if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
+Compress-Archive -Path $exePath -DestinationPath $zipPath
+Write-Host "      Created: $zipName"
+
 $exeSize = 0
 if (Test-Path $exePath) {
     $exeSize = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
+}
+$zipSize = 0
+if (Test-Path $zipPath) {
+    $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 }
 
 Write-Host ""
@@ -121,6 +131,7 @@ Write-Host "  Publish completed successfully!"
 Write-Host "============================================"
 Write-Host "  Version : $version"
 Write-Host "  EXE     : $exePath ($exeSize MB)"
+Write-Host "  ZIP     : $zipPath ($zipSize MB)"
 Write-Host "  Channel : $Channel"
 Write-Host "============================================"
 Write-Host ""

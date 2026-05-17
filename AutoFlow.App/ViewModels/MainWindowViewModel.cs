@@ -407,29 +407,40 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void EnsureDemoScripts()
     {
-        if (_localSettingsService.LoadDemoScriptsInitialized())
+        if (Directory.EnumerateFiles(ScriptsDirectory, "*.lua").Any())
         {
             return;
         }
 
-        var demoFileNames = new[] { "demo.lua", "demo2.lua" };
         var assembly = typeof(MainWindowViewModel).Assembly;
+        const string resourcePrefix = "AutoFlow.App.Resources.";
+        var copiedCount = 0;
 
-        foreach (var fileName in demoFileNames)
+        foreach (var resourceName in assembly.GetManifestResourceNames())
         {
-            var resourceName = $"AutoFlow.App.Resources.{fileName}";
+            if (!resourceName.StartsWith(resourcePrefix, StringComparison.Ordinal) ||
+                !resourceName.EndsWith(".lua", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             using var stream = assembly.GetManifestResourceStream(resourceName);
             if (stream is null)
             {
                 continue;
             }
 
+            var fileName = resourceName[resourcePrefix.Length..];
             var targetPath = Path.Combine(ScriptsDirectory, fileName);
             using var reader = new StreamReader(stream);
             File.WriteAllText(targetPath, reader.ReadToEnd());
+            copiedCount++;
         }
 
-        _localSettingsService.SaveDemoScriptsInitialized();
+        if (copiedCount > 0)
+        {
+            _logger.V($"脚本目录为空，已初始化演示脚本");
+        }
     }
 
     private void LoadScripts()

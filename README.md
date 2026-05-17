@@ -70,7 +70,7 @@
 
 ### 下载运行
 
-从 [Releases](https://github.com/dss886/AutoFlow/releases) 页面下载最新的 `AutoFlow_win-x64.zip`，解压后双击 `AutoFlow-win-x64.exe` 即可运行。
+从 [Releases](https://github.com/dss886/AutoFlow/releases) 页面下载最新的 `AutoFlow-v*-win-x64.zip`，解压后双击 `AutoFlow-v*-win-x64.exe` 即可运行。
 
 > 💡 程序第一次运行会在程序同级目录下自动创建 `scripts/` 目录和演示脚本。
 

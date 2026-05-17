@@ -26,7 +26,6 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        VelopackApp.Build().Run();
         base.OnStartup(e);
 
         try

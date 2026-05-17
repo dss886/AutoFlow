@@ -85,19 +85,22 @@ jobs:
           }
           Write-Host "Pack outputs verified successfully."
 
-      - name: Rename EXE
+      - name: Rename EXE and create ZIP
         shell: pwsh
         run: |
           $renamed = "AutoFlow-v${{ steps.version.outputs.value }}-win-x64.exe"
           Rename-Item -Path publish/win-x64/AutoFlow.exe -NewName $renamed
           Write-Host "Renamed: AutoFlow.exe -> $renamed"
+          $zipName = "AutoFlow-v${{ steps.version.outputs.value }}-win-x64.zip"
+          Compress-Archive -Path publish/win-x64/$renamed -DestinationPath publish/win-x64/$zipName
+          Write-Host "Created: $zipName"
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.value }}
           files: |
-            publish/win-x64/AutoFlow-v*-win-x64.exe
+            publish/win-x64/AutoFlow-v*-win-x64.zip
             publish/win-x64/RELEASES
             publish/win-x64/AutoFlow-*.nupkg
             publish/win-x64/AutoFlow-*.delta

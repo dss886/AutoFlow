@@ -13,6 +13,8 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);.temp\**;publish\**</DefaultItemExcludes>
     <MinVerDefaultPreReleaseIdentifiers>beta</MinVerDefaultPreReleaseIdentifiers>
     <MinVerTagPrefix>v</MinVerTagPrefix>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <StartupObject>AutoFlow.App.Program</StartupObject>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -46,8 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\scripts\demo.lua" Link="Resources\demo.lua" />
-    <EmbeddedResource Include="..\scripts\demo2.lua" Link="Resources\demo2.lua" />
+    <EmbeddedResource Include="Assets\Scripts\*.lua" Link="Resources\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
