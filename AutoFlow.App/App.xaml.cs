@@ -79,7 +79,9 @@ public partial class App : System.Windows.Application
         services.AddSingleton<LocalSettingsService>();
         services.AddSingleton<LuaRuntimeService>();
         services.AddSingleton<PathService>();
+        services.AddSingleton<ScreenCaptureService>();
         services.AddSingleton<ScreenColorService>();
+        services.AddSingleton<ScreenNumberRecognitionService>();
         services.AddSingleton<ScriptCatalogService>();
         services.AddSingleton<ScriptRunnerService>();
         services.AddSingleton<TrayIconService>();

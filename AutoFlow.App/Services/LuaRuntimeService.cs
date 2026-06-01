@@ -7,10 +7,15 @@ public sealed class LuaRuntimeService
 {
     private readonly AppLoggerService _logger;
     private readonly AutomationInputService _inputService;
+    private readonly ScreenNumberRecognitionService _screenNumberRecognitionService;
 
-    public LuaRuntimeService(AutomationInputService inputService, AppLoggerService logger)
+    public LuaRuntimeService(
+        AutomationInputService inputService,
+        ScreenNumberRecognitionService screenNumberRecognitionService,
+        AppLoggerService logger)
     {
         _inputService = inputService ?? throw new ArgumentNullException(nameof(inputService));
+        _screenNumberRecognitionService = screenNumberRecognitionService ?? throw new ArgumentNullException(nameof(screenNumberRecognitionService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -148,6 +153,27 @@ public sealed class LuaRuntimeService
             return DynValue.NewString(_inputService.GetScreenColorHex(x, y));
         });
 
+        table["read_number"] = DynValue.NewCallback((_, args) =>
+        {
+            ThrowIfCancellationRequested(cancellationToken);
+            var x1 = RequireInt(args, 0, "screen.read_number");
+            var y1 = RequireInt(args, 1, "screen.read_number");
+            var x2 = RequireInt(args, 2, "screen.read_number");
+            var y2 = RequireInt(args, 3, "screen.read_number");
+            var options = ReadScreenNumberOptions(args, 4, "screen.read_number");
+            var region = RequireScreenRegion(x1, y1, x2, y2, "screen.read_number");
+
+            var success = _screenNumberRecognitionService.TryReadNumber(
+                region.X,
+                region.Y,
+                region.Width,
+                region.Height,
+                options,
+                out var value);
+
+            return success ? DynValue.NewNumber(value) : DynValue.Nil;
+        });
+
         return table;
     }
 
@@ -175,4 +201,99 @@ public sealed class LuaRuntimeService
 
         return args[index].String;
     }
+
+    private static ScreenNumberReadOptions ReadScreenNumberOptions(
+        CallbackArguments args,
+        int index,
+        string functionName)
+    {
+        if (args.Count <= index || args[index].IsNil())
+        {
+            return new ScreenNumberReadOptions();
+        }
+
+        if (args[index].Type != DataType.Table)
+        {
+            throw new ScriptRuntimeException($"{functionName} 的 options 参数必须是 table。");
+        }
+
+        var table = args[index].Table;
+        var mode = ReadMode(table, functionName);
+        return new ScreenNumberReadOptions
+        {
+            Language = ReadOptionalString(table, "lang") ?? "eng",
+            CharacterWhitelist = ReadOptionalString(table, "allow") ?? BuildDefaultWhitelist(mode),
+            Scale = ReadOptionalInt(table, "scale") ?? 3,
+            Threshold = ReadOptionalByte(table, "threshold"),
+            Invert = ReadOptionalBool(table, "invert") ?? false,
+            TrimResult = ReadOptionalBool(table, "trim") ?? true,
+            Mode = mode,
+            MaxCandidates = ReadOptionalInt(table, "max_candidates") ?? 3,
+        };
+    }
+
+    private static ScreenNumberReadMode ReadMode(Table table, string functionName)
+    {
+        var rawMode = ReadOptionalString(table, "mode");
+        if (string.IsNullOrWhiteSpace(rawMode))
+        {
+            return ScreenNumberReadMode.Integer;
+        }
+
+        return rawMode.Trim().ToLowerInvariant() switch
+        {
+            "int" or "integer" => ScreenNumberReadMode.Integer,
+            "float" or "double" or "decimal" => ScreenNumberReadMode.Float,
+            _ => throw new ScriptRuntimeException($"{functionName} 的 options.mode 只支持 integer 或 float。"),
+        };
+    }
+
+    private static string BuildDefaultWhitelist(ScreenNumberReadMode mode)
+    {
+        return mode == ScreenNumberReadMode.Integer
+            ? "0123456789"
+            : "0123456789.,";
+    }
+
+    private static string? ReadOptionalString(Table table, string key)
+    {
+        var value = table.Get(key);
+        return value.Type == DataType.String ? value.String : null;
+    }
+
+    private static int? ReadOptionalInt(Table table, string key)
+    {
+        var value = table.Get(key);
+        return value.Type == DataType.Number ? (int)value.Number : null;
+    }
+
+    private static byte? ReadOptionalByte(Table table, string key)
+    {
+        var number = ReadOptionalInt(table, key);
+        if (number is null)
+        {
+            return null;
+        }
+
+        return (byte)Math.Clamp(number.Value, byte.MinValue, byte.MaxValue);
+    }
+
+    private static bool? ReadOptionalBool(Table table, string key)
+    {
+        var value = table.Get(key);
+        return value.Type == DataType.Boolean ? value.Boolean : null;
+    }
+
+    private static ScreenRegion RequireScreenRegion(int x1, int y1, int x2, int y2, string functionName)
+    {
+        if (x2 <= x1 || y2 <= y1)
+        {
+            throw new ScriptRuntimeException(
+                $"{functionName} 要求右下角坐标严格大于左上角坐标。");
+        }
+
+        return new ScreenRegion(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    private readonly record struct ScreenRegion(int X, int Y, int Width, int Height);
 }

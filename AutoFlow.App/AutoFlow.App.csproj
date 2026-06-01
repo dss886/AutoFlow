@@ -33,6 +33,7 @@
     </PackageReference>
     <PackageReference Include="MoonSharp" Version="2.0.0" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
@@ -45,6 +46,13 @@
     <Resource Include="Assets\Icons\*.svg" />
     <Resource Include="Assets\Icons\*.ico" />
     <Resource Include="Assets\Sounds\*.wav" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\TessData\*.traineddata">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>tessdata\%(Filename)%(Extension)</TargetPath>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

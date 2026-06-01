@@ -21,6 +21,11 @@ public sealed class PathService
         return Path.Combine(AppContext.BaseDirectory, "scripts");
     }
 
+    public string ResolveTessDataDirectory()
+    {
+        return Path.Combine(AppContext.BaseDirectory, "tessdata");
+    }
+
     public void EnsureDirectory(string directoryPath)
     {
         Directory.CreateDirectory(directoryPath);
