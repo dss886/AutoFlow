@@ -9,10 +9,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Build-Passing-brightgreen" alt="Build Passing" />
-  <img src="https://img.shields.io/badge/Platform-Windows-blue?" alt="Platform Windows" />
-  <img src="https://img.shields.io/badge/Script-Lua-yellow" alt="Script Lua" />
-  <img src="https://img.shields.io/badge/License-GPLv3-blue" alt="License GPLv3" />
+  <img src="https://img.shields.io/badge/Build-Passing-4CAF50" alt="Build Passing" />
+  <img src="https://img.shields.io/badge/Platform-Windows-2196F3" alt="Platform Windows" />
+  <img src="https://img.shields.io/badge/Script-Lua-3F51B5" alt="Script Lua" />
+  <img src="https://img.shields.io/badge/License-GPLv3-D32F2F" alt="License GPLv3" />
+  <img src="https://img.shields.io/badge/AI_Coding-95%25-4CAF50" alt="AI Coding 95%" />
 </p>
 
 <img src="Screenshot.png" alt="AutoFlow Screenshot" />
@@ -35,6 +36,10 @@
   <tr>
     <td>🎨 <strong>屏幕取色</strong></td>
     <td>拾取屏幕上任意坐标的颜色值，内置浮窗快捷记录坐标和屏幕取色</td>
+  </tr>
+  <tr>
+    <td>🔢 <strong>数字识别</strong></td>
+    <td>支持识别屏幕指定矩形区域内的数字</td>
   </tr>
   <tr>
     <td>⏺️ <strong>操作录制</strong></td>
@@ -91,8 +96,6 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 ### 打包发布
 
 本项目使用 [MinVer](https://github.com/adamralph/minver) 自动管理版本号，使用 [Velopack](https://github.com/velopack/velopack) 打包并支持自动更新。
-
-版本号由 Git Tag 自动决定，无需手动维护。
 
 #### 本地打包
 
@@ -215,17 +218,56 @@ keyboard.press("O")
 keyboard.up("Shift")
 ```
 
-### `screen` - 屏幕取色
+### `screen` - 屏幕操作
 
 | API | 说明 |
 |-----|------|
 | `screen.get_color(x, y)` | 获取屏幕坐标 (x, y) 处的颜色，返回 `#RRGGBB` 格式 |
+| `screen.read_number(x1, y1, x2, y2, options)` | 识别矩形区域内的数字，坐标分别为左上角和右下角，识别失败时返回 `nil` |
 
 ```lua
 local color = screen.get_color(640, 360)
 host.log("坐标 (640, 360) 的颜色是: " .. color)
 -- 输出: 坐标 (640, 360) 的颜色是: #FF5733
+
+local hp = screen.read_number(100, 50, 220, 90)
+if hp ~= nil then
+    host.log("当前血量: " .. tostring(hp))
+end
 ```
+
+`screen.read_number(...)` 使用 Tesseract 在本地进行 OCR，适合读取游戏或桌面程序里的数字文本。
+
+`options` 支持以下字段：
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `lang` | `string` | `"eng"` | Tesseract 语言包名称，需要输出目录 `tessdata/` 下存在对应 `traineddata` 文件 |
+| `allow` | `string` | 整数模式为 `"0123456789"`，浮点模式为 `"0123456789.,"` | 允许识别的字符白名单 |
+| `scale` | `number` | `3` | 截图放大倍数，通常 `2` 到 `4` 对小字号数字更稳定 |
+| `threshold` | `number` | `nil` | 二值化阈值，推荐在数字与背景对比明显时使用，例如 `160` 到 `200` |
+| `invert` | `boolean` | `false` | 是否先反色再识别，适合浅色背景上的深色数字 |
+| `trim` | `boolean` | `true` | 是否裁掉 OCR 结果首尾空白 |
+| `mode` | `string` | `"integer"` | 返回值解析模式，支持 `"integer"` / `"float"` |
+| `max_candidates` | `number` | `3` | 最多尝试解析的候选数字个数 |
+
+```lua
+local stamina = screen.read_number(320, 120, 420, 156, {
+    scale = 4,
+    threshold = 180,
+    mode = "integer",
+    allow = "0123456789"
+})
+
+local ratio = screen.read_number(500, 120, 620, 156, {
+    scale = 4,
+    threshold = 170,
+    mode = "float",
+    allow = "0123456789.,"
+})
+```
+
+> 更多选项请参考 [Tesseract 官方文档](https://tesseract-ocr.github.io/tessdoc/).
 
 ## ⌨️ 全局快捷键
 

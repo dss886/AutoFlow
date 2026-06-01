@@ -1,6 +1,7 @@
 .vs/
 .vscode/
 .temp/
+TODO.md
 
 # Build outputs
 bin/
