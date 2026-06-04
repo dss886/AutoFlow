@@ -242,7 +242,7 @@ end
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `lang` | `string` | `"eng"` | Tesseract 语言包名称，需要输出目录 `tessdata/` 下存在对应 `traineddata` 文件 |
+| `lang` | `string` | `"eng"` | Tesseract 语言包名称；目前仅内置 `eng`，首次使用 OCR 时会在 `AutoFlow.exe` 同级自动创建 `tessdata/eng.traineddata` 和 `bin`目录 |
 | `allow` | `string` | 整数模式为 `"0123456789"`，浮点模式为 `"0123456789.,"` | 允许识别的字符白名单 |
 | `scale` | `number` | `3` | 截图放大倍数，通常 `2` 到 `4` 对小字号数字更稳定 |
 | `threshold` | `number` | `nil` | 二值化阈值，推荐在数字与背景对比明显时使用，例如 `160` 到 `200` |

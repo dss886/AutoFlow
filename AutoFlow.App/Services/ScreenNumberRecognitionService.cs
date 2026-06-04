@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using AutoFlow.App.Models;
 using Tesseract;
@@ -11,20 +12,27 @@ namespace AutoFlow.App.Services;
 
 public sealed class ScreenNumberRecognitionService : IDisposable
 {
+    private const string DefaultEmbeddedLanguage = "eng";
+    private const string EmbeddedTrainedDataResourceName = "AutoFlow.App.Assets.TessData.eng.traineddata";
+    private const string EmbeddedLeptonicaResourceName = "AutoFlow.App.Native.x64.leptonica-1.82.0.dll";
+    private const string EmbeddedTesseractResourceName = "AutoFlow.App.Native.x64.tesseract50.dll";
     private static readonly Regex IntegerPattern = new(@"[-+]?\d+", RegexOptions.Compiled);
     private static readonly Regex FloatPattern = new(@"[-+]?\d+(?:[.,]\d+)?", RegexOptions.Compiled);
     private readonly Dictionary<string, TesseractEngine> _engines = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _syncRoot = new();
+    private readonly AppLoggerService _logger;
     private readonly PathService _pathService;
     private readonly ScreenCaptureService _screenCaptureService;
     private bool _disposed;
 
     public ScreenNumberRecognitionService(
         ScreenCaptureService screenCaptureService,
-        PathService pathService)
+        PathService pathService,
+        AppLoggerService logger)
     {
         _screenCaptureService = screenCaptureService ?? throw new ArgumentNullException(nameof(screenCaptureService));
         _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public bool TryReadNumber(
@@ -90,7 +98,8 @@ public sealed class ScreenNumberRecognitionService : IDisposable
             return existing;
         }
 
-        var tessDataDirectory = _pathService.ResolveTessDataDirectory();
+        EnsureNativeLibrariesAvailable();
+        var tessDataDirectory = EnsureLanguageDataFile(language);
         var trainedDataPath = Path.Combine(tessDataDirectory, $"{language}.traineddata");
         if (!File.Exists(trainedDataPath))
         {
@@ -101,6 +110,86 @@ public sealed class ScreenNumberRecognitionService : IDisposable
         var engine = new TesseractEngine(tessDataDirectory, language, EngineMode.Default);
         _engines[language] = engine;
         return engine;
+    }
+
+    private void EnsureNativeLibrariesAvailable()
+    {
+        if (!Environment.Is64BitProcess)
+        {
+            throw new InvalidOperationException("当前仅支持在 64 位进程中使用 Tesseract OCR。");
+        }
+
+        var nativeDirectory = _pathService.ResolveNativeLibraryDirectory();
+        var isFirstCreate = !Directory.Exists(nativeDirectory);
+        _pathService.EnsureDirectory(nativeDirectory);
+        if (isFirstCreate)
+        {
+            _logger.I($"已初始化 OCR 原生库目录: {nativeDirectory}");
+        }
+
+        ExtractEmbeddedFileIfMissing(
+            EmbeddedLeptonicaResourceName,
+            Path.Combine(nativeDirectory, "leptonica-1.82.0.dll"));
+        ExtractEmbeddedFileIfMissing(
+            EmbeddedTesseractResourceName,
+            Path.Combine(nativeDirectory, "tesseract50.dll"));
+
+        TesseractEnviornment.CustomSearchPath = _pathService.ResolveExecutableDirectory();
+    }
+
+    private string EnsureLanguageDataFile(string language)
+    {
+        var tessDataDirectory = _pathService.ResolveTessDataDirectory();
+        _pathService.EnsureDirectory(tessDataDirectory);
+
+        var trainedDataPath = Path.Combine(tessDataDirectory, $"{language}.traineddata");
+        if (File.Exists(trainedDataPath))
+        {
+            return tessDataDirectory;
+        }
+
+        if (TryExtractEmbeddedLanguageData(language, trainedDataPath))
+        {
+            return tessDataDirectory;
+        }
+
+        throw new InvalidOperationException(
+            $"缺少 Tesseract 训练数据文件: {language}.traineddata。当前内置仅包含 {DefaultEmbeddedLanguage}.traineddata。");
+    }
+
+    private static bool TryExtractEmbeddedLanguageData(string language, string targetPath)
+    {
+        if (!string.Equals(language, DefaultEmbeddedLanguage, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        ExtractEmbeddedFileIfMissing(EmbeddedTrainedDataResourceName, targetPath);
+        return true;
+    }
+
+    private static void ExtractEmbeddedFileIfMissing(string resourceName, string targetPath)
+    {
+        if (File.Exists(targetPath))
+        {
+            return;
+        }
+
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream is null)
+        {
+            throw new InvalidOperationException($"未找到内嵌资源: {resourceName}");
+        }
+
+        var directory = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        using var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        stream.CopyTo(fileStream);
     }
 
     private static Bitmap PreprocessImage(Bitmap source, ScreenNumberReadOptions options)

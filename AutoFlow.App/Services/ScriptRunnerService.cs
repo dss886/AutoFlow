@@ -51,7 +51,9 @@ public sealed class ScriptRunnerService
         }
         catch (Exception ex)
         {
-            _logger.E($"脚本执行失败: 「{script.Name}」，错误信息: {ex.Message}");
+            _logger.E(ExceptionLogFormatter.Format(
+                $"脚本执行失败: 「{script.Name}」",
+                ex));
         }
         finally
         {

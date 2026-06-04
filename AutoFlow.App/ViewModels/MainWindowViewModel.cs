@@ -286,7 +286,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.E($"启动脚本失败: {ex.Message}");
+            _logger.E(ExceptionLogFormatter.Format("启动脚本失败。", ex));
         }
     }
 

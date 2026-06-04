@@ -49,13 +49,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets\TessData\*.traineddata">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>tessdata\%(Filename)%(Extension)</TargetPath>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
+    <EmbeddedResource Include="Assets\TessData\eng.traineddata" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)tesseract\5.2.0\x64\leptonica-1.82.0.dll"
+                      LogicalName="AutoFlow.App.Native.x64.leptonica-1.82.0.dll" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)tesseract\5.2.0\x64\tesseract50.dll"
+                      LogicalName="AutoFlow.App.Native.x64.tesseract50.dll" />
     <EmbeddedResource Include="Assets\Scripts\*.lua" Link="Resources\%(Filename)%(Extension)" />
   </ItemGroup>
 
