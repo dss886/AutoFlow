@@ -222,19 +222,44 @@ keyboard.up("Shift")
 
 | API | 说明 |
 |-----|------|
-| `screen.get_color(x, y)` | 获取屏幕坐标 (x, y) 处的颜色，返回 `#RRGGBB` 格式 |
+| `screen.get_color(points)` | 批量获取多个坐标的颜色，`points` 为坐标数组，返回颜色数组 |
 | `screen.read_number(x1, y1, x2, y2, options)` | 识别矩形区域内的数字，坐标分别为左上角和右下角，识别失败时返回 `nil` |
 
 ```lua
-local color = screen.get_color(640, 360)
-host.log("坐标 (640, 360) 的颜色是: " .. color)
--- 输出: 坐标 (640, 360) 的颜色是: #FF5733
+local colors = screen.get_color({
+    { x = 560, y = 320 },
+    { x = 640, y = 360 },
+    { x = 720, y = 400 }
+})
+
+for i = 1, #colors do
+    local color = colors[i]
+    host.log(string.format(
+        "采样点 %d 的颜色 = %s, RGB = (%d, %d, %d)",
+        i,
+        color.hex,
+        color.r,
+        color.g,
+        color.b))
+end
 
 local hp = screen.read_number(100, 50, 220, 90)
 if hp ~= nil then
     host.log("当前血量: " .. tostring(hp))
 end
 ```
+
+批量模式下每个坐标支持两种写法：
+
+- `{ x = 640, y = 360 }`
+- `{ 640, 360 }`
+
+返回结果中的每一项都包含以下字段：
+
+- `color.r`
+- `color.g`
+- `color.b`
+- `color.hex`
 
 `screen.read_number(...)` 使用 Tesseract 在本地进行 OCR，适合读取游戏或桌面程序里的数字文本。
 

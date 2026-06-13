@@ -1,5 +1,5 @@
-using MoonSharp.Interpreter;
 using AutoFlow.App.Models;
+using MoonSharp.Interpreter;
 
 namespace AutoFlow.App.Services;
 
@@ -64,16 +64,7 @@ public sealed class LuaRuntimeService
         {
             ThrowIfCancellationRequested(cancellationToken);
             var milliseconds = RequireInt(args, 0, "host.sleep");
-
-            var remaining = milliseconds;
-            while (remaining > 0)
-            {
-                ThrowIfCancellationRequested(cancellationToken);
-                var step = Math.Min(remaining, 100);
-                Thread.Sleep(step);
-                remaining -= step;
-            }
-
+            SleepWithCancellation(milliseconds, cancellationToken);
             return DynValue.Nil;
         });
 
@@ -148,9 +139,9 @@ public sealed class LuaRuntimeService
         table["get_color"] = DynValue.NewCallback((_, args) =>
         {
             ThrowIfCancellationRequested(cancellationToken);
-            var x = RequireInt(args, 0, "screen.get_color");
-            var y = RequireInt(args, 1, "screen.get_color");
-            return DynValue.NewString(_inputService.GetScreenColorHex(x, y));
+            var points = ReadScreenPoints(RequireTable(args, 0, "screen.get_color", "points"), "screen.get_color");
+            var colors = _inputService.GetScreenColors(points);
+            return BuildBatchColorResult(script, colors);
         });
 
         table["read_number"] = DynValue.NewCallback((_, args) =>
@@ -182,6 +173,18 @@ public sealed class LuaRuntimeService
         cancellationToken.ThrowIfCancellationRequested();
     }
 
+    private static void SleepWithCancellation(int milliseconds, CancellationToken cancellationToken)
+    {
+        var remaining = milliseconds;
+        while (remaining > 0)
+        {
+            ThrowIfCancellationRequested(cancellationToken);
+            var step = Math.Min(remaining, 100);
+            Thread.Sleep(step);
+            remaining -= step;
+        }
+    }
+
     private static int RequireInt(CallbackArguments args, int index, string functionName)
     {
         if (args.Count <= index || args[index].Type != DataType.Number)
@@ -202,6 +205,16 @@ public sealed class LuaRuntimeService
         return args[index].String;
     }
 
+    private static Table RequireTable(CallbackArguments args, int index, string functionName, string parameterName)
+    {
+        if (args.Count <= index || args[index].Type != DataType.Table)
+        {
+            throw new ScriptRuntimeException($"{functionName} 的 {parameterName} 参数必须是 table。");
+        }
+
+        return args[index].Table;
+    }
+
     private static ScreenNumberReadOptions ReadScreenNumberOptions(
         CallbackArguments args,
         int index,
@@ -212,12 +225,7 @@ public sealed class LuaRuntimeService
             return new ScreenNumberReadOptions();
         }
 
-        if (args[index].Type != DataType.Table)
-        {
-            throw new ScriptRuntimeException($"{functionName} 的 options 参数必须是 table。");
-        }
-
-        var table = args[index].Table;
+        var table = RequireTable(args, index, functionName, "options");
         var mode = ReadMode(table, functionName);
         return new ScreenNumberReadOptions
         {
@@ -259,6 +267,80 @@ public sealed class LuaRuntimeService
     {
         var value = table.Get(key);
         return value.Type == DataType.String ? value.String : null;
+    }
+
+    private static IReadOnlyList<(int X, int Y)> ReadScreenPoints(Table pointsTable, string functionName)
+    {
+        var count = (int)pointsTable.Length;
+        if (count == 0)
+        {
+            return Array.Empty<(int X, int Y)>();
+        }
+
+        var points = new (int X, int Y)[count];
+        for (var index = 0; index < count; index++)
+        {
+            var pointValue = pointsTable.Get(index + 1);
+            if (pointValue.Type != DataType.Table)
+            {
+                throw new ScriptRuntimeException($"{functionName} 的 points[{index + 1}] 必须是 table。");
+            }
+
+            points[index] = ReadScreenPoint(pointValue.Table, functionName, index + 1);
+        }
+
+        return points;
+    }
+
+    private static (int X, int Y) ReadScreenPoint(Table pointTable, string functionName, int pointIndex)
+    {
+        var x = ReadRequiredPointCoordinate(pointTable, "x", 1, functionName, pointIndex);
+        var y = ReadRequiredPointCoordinate(pointTable, "y", 2, functionName, pointIndex);
+        return (x, y);
+    }
+
+    private static int ReadRequiredPointCoordinate(
+        Table pointTable,
+        string key,
+        int fallbackIndex,
+        string functionName,
+        int pointIndex)
+    {
+        var namedValue = pointTable.Get(key);
+        if (namedValue.Type == DataType.Number)
+        {
+            return (int)namedValue.Number;
+        }
+
+        var positionalValue = pointTable.Get(fallbackIndex);
+        if (positionalValue.Type == DataType.Number)
+        {
+            return (int)positionalValue.Number;
+        }
+
+        throw new ScriptRuntimeException($"{functionName} 的 points[{pointIndex}].{key} 必须是数字。");
+    }
+
+    private static DynValue BuildBatchColorResult(Script script, IReadOnlyList<(int R, int G, int B, string Hex)> colors)
+    {
+        var result = new Table(script);
+        for (var index = 0; index < colors.Count; index++)
+        {
+            result[index + 1] = DynValue.NewTable(BuildColorTable(script, colors[index]));
+        }
+
+        return DynValue.NewTable(result);
+    }
+
+    private static Table BuildColorTable(Script script, (int R, int G, int B, string Hex) color)
+    {
+        var (r, g, b, hex) = color;
+        var result = new Table(script);
+        result["r"] = DynValue.NewNumber(r);
+        result["g"] = DynValue.NewNumber(g);
+        result["b"] = DynValue.NewNumber(b);
+        result["hex"] = DynValue.NewString(hex);
+        return result;
     }
 
     private static int? ReadOptionalInt(Table table, string key)

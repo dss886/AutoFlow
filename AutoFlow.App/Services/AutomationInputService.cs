@@ -21,31 +21,23 @@ public sealed class AutomationInputService
         SetCursorPos(x, y);
     }
 
-    public string GetScreenColorHex(int x, int y)
+    public IReadOnlyList<(int R, int G, int B, string Hex)> GetScreenColors(IReadOnlyList<(int X, int Y)> points)
     {
-        return _screenColorService.GetScreenColorHex(x, y);
+        return _screenColorService.GetScreenColors(points);
     }
 
     public void MouseDown(string button)
     {
         var normalizedButton = NormalizeMouseButton(button);
         SendMouseInput(normalizedButton, isDown: true);
-
-        lock (_syncRoot)
-        {
-            _pressedMouseButtons.Add(normalizedButton);
-        }
+        UpdatePressedMouseButton(normalizedButton, isPressed: true);
     }
 
     public void MouseUp(string button)
     {
         var normalizedButton = NormalizeMouseButton(button);
         SendMouseInput(normalizedButton, isDown: false);
-
-        lock (_syncRoot)
-        {
-            _pressedMouseButtons.Remove(normalizedButton);
-        }
+        UpdatePressedMouseButton(normalizedButton, isPressed: false);
     }
 
     public void Click(string button)
@@ -80,24 +72,16 @@ public sealed class AutomationInputService
 
     public void KeyDown(string keyExpression)
     {
-        var key = ToVirtualKey(keyExpression);
-        SendKeyboardInput((ushort)key, isKeyUp: false);
-
-        lock (_syncRoot)
-        {
-            _pressedKeys.Add((ushort)key);
-        }
+        var virtualKey = (ushort)ToVirtualKey(keyExpression);
+        SendKeyboardInput(virtualKey, isKeyUp: false);
+        UpdatePressedKey(virtualKey, isPressed: true);
     }
 
     public void KeyUp(string keyExpression)
     {
-        var key = ToVirtualKey(keyExpression);
-        SendKeyboardInput((ushort)key, isKeyUp: true);
-
-        lock (_syncRoot)
-        {
-            _pressedKeys.Remove((ushort)key);
-        }
+        var virtualKey = (ushort)ToVirtualKey(keyExpression);
+        SendKeyboardInput(virtualKey, isKeyUp: true);
+        UpdatePressedKey(virtualKey, isPressed: false);
     }
 
     public void ReleasePressedInputs()
@@ -151,8 +135,43 @@ public sealed class AutomationInputService
         SendInputs(new[] { input });
     }
 
+    private void UpdatePressedMouseButton(string button, bool isPressed)
+    {
+        lock (_syncRoot)
+        {
+            if (isPressed)
+            {
+                _pressedMouseButtons.Add(button);
+            }
+            else
+            {
+                _pressedMouseButtons.Remove(button);
+            }
+        }
+    }
+
+    private void UpdatePressedKey(ushort virtualKey, bool isPressed)
+    {
+        lock (_syncRoot)
+        {
+            if (isPressed)
+            {
+                _pressedKeys.Add(virtualKey);
+            }
+            else
+            {
+                _pressedKeys.Remove(virtualKey);
+            }
+        }
+    }
+
     private static string NormalizeMouseButton(string button)
     {
+        if (string.IsNullOrWhiteSpace(button))
+        {
+            throw new InvalidOperationException("未提供有效鼠标按键。");
+        }
+
         var normalized = button.Trim().ToLowerInvariant();
         return normalized switch
         {
@@ -163,7 +182,7 @@ public sealed class AutomationInputService
 
     private static MouseEventFlags ToMouseEventFlag(string button, bool isDown)
     {
-        return NormalizeMouseButton(button) switch
+        return button switch
         {
             "left" => isDown ? MouseEventFlags.LeftDown : MouseEventFlags.LeftUp,
             "right" => isDown ? MouseEventFlags.RightDown : MouseEventFlags.RightUp,

@@ -92,12 +92,17 @@ public sealed class InputRecordingSession
         return new CursorReading(
             point.X,
             point.Y,
-            _screenColorService.GetScreenColorHex(point.X, point.Y));
+            ReadScreenColor(point.X, point.Y).Hex);
     }
 
     public string CreateReadingLogMessage(int x, int y)
     {
-        return $"鼠标位置 ({x}, {y}), 颜色 {_screenColorService.GetScreenColorHex(x, y)}";
+        return $"鼠标位置 ({x}, {y}), 颜色 {ReadScreenColor(x, y).Hex}";
+    }
+
+    private (int R, int G, int B, string Hex) ReadScreenColor(int x, int y)
+    {
+        return _screenColorService.GetScreenColors([(x, y)])[0];
     }
 
     private List<ScriptAction> BuildScriptActions(long stopTimestamp)

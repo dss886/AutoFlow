@@ -9,11 +9,23 @@ local points = {
 
 for i = 1, #points do
     local point = points[i]
-    local color = screen.get_color(point.x, point.y)
-    host.log("采样点 " .. i .. " 坐标 (" .. point.x .. ", " .. point.y .. ") 颜色: " .. color)
-
     mouse.move(point.x, point.y)
     host.sleep(250)
+end
+
+local colors = screen.get_color(points)
+for i = 1, #colors do
+    local point = points[i]
+    local color = colors[i]
+    host.log(string.format(
+        "采样点 %d 坐标 (%d, %d) 颜色: %s RGB=(%d, %d, %d)",
+        i,
+        point.x,
+        point.y,
+        color.hex,
+        color.r,
+        color.g,
+        color.b))
 end
 
 local target = points[2]

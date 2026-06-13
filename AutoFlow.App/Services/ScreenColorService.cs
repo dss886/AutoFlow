@@ -1,69 +1,109 @@
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Windows.Media;
 using MediaColor = System.Windows.Media.Color;
 
 namespace AutoFlow.App.Services;
 
 public sealed class ScreenColorService
 {
-    private const uint ClrInvalid = 0xFFFFFFFF;
+    private const int BytesPerPixel = 4;
+    private readonly ScreenCaptureService _screenCaptureService;
 
-    public string GetScreenColorHex(int x, int y)
+    public ScreenColorService(ScreenCaptureService screenCaptureService)
     {
-        if (!TryGetScreenColor(x, y, out var color))
-        {
-            throw new InvalidOperationException("读取屏幕颜色失败。");
-        }
-
-        return FormatHexColor(color);
+        _screenCaptureService = screenCaptureService ?? throw new ArgumentNullException(nameof(screenCaptureService));
     }
 
-    public MediaColor GetScreenColorOrDefault(int x, int y, MediaColor fallback)
+    public IReadOnlyList<(int R, int G, int B, string Hex)> GetScreenColors(IReadOnlyList<(int X, int Y)> points)
     {
-        return TryGetScreenColor(x, y, out var color) ? color : fallback;
+        ArgumentNullException.ThrowIfNull(points);
+
+        if (points.Count == 0)
+        {
+            return Array.Empty<(int R, int G, int B, string Hex)>();
+        }
+
+        var captureBounds = GetCaptureBounds(points);
+        using var capture = _screenCaptureService.CaptureRegion(
+            captureBounds.X,
+            captureBounds.Y,
+            captureBounds.Width,
+            captureBounds.Height);
+        return ReadColorsFromCapture(capture, captureBounds, points);
     }
 
-    public bool TryGetScreenColor(int x, int y, out MediaColor color)
+    private IReadOnlyList<(int R, int G, int B, string Hex)> ReadColorsFromCapture(
+        Bitmap capture,
+        Rectangle captureBounds,
+        IReadOnlyList<(int X, int Y)> points)
     {
-        var desktopDc = GetDC(IntPtr.Zero);
-        if (desktopDc == IntPtr.Zero)
-        {
-            color = default;
-            return false;
-        }
+        var bitmapBounds = new Rectangle(0, 0, capture.Width, capture.Height);
+        var bitmapData = capture.LockBits(
+            bitmapBounds,
+            ImageLockMode.ReadOnly,
+            PixelFormat.Format32bppArgb);
 
         try
         {
-            var pixel = GetPixel(desktopDc, x, y);
-            if (pixel == ClrInvalid)
+            var stride = Math.Abs(bitmapData.Stride);
+            var buffer = new byte[stride * capture.Height];
+            Marshal.Copy(bitmapData.Scan0, buffer, 0, buffer.Length);
+
+            var colors = new (int R, int G, int B, string Hex)[points.Count];
+            for (var index = 0; index < points.Count; index++)
             {
-                color = default;
-                return false;
+                var point = points[index];
+                var relativeX = point.X - captureBounds.X;
+                var relativeY = point.Y - captureBounds.Y;
+                var pixelOffset = relativeY * stride + relativeX * BytesPerPixel;
+                var red = buffer[pixelOffset + 2];
+                var green = buffer[pixelOffset + 1];
+                var blue = buffer[pixelOffset];
+
+                colors[index] = (
+                    red,
+                    green,
+                    blue,
+                    FormatHexColor(red, green, blue));
             }
 
-            var red = (byte)(pixel & 0x000000FF);
-            var green = (byte)((pixel & 0x0000FF00) >> 8);
-            var blue = (byte)((pixel & 0x00FF0000) >> 16);
-            color = MediaColor.FromRgb(red, green, blue);
-            return true;
+            return colors;
         }
         finally
         {
-            ReleaseDC(IntPtr.Zero, desktopDc);
+            capture.UnlockBits(bitmapData);
         }
+    }
+
+    private static Rectangle GetCaptureBounds(IReadOnlyList<(int X, int Y)> points)
+    {
+        var minX = points[0].X;
+        var minY = points[0].Y;
+        var maxX = points[0].X;
+        var maxY = points[0].Y;
+
+        for (var index = 1; index < points.Count; index++)
+        {
+            var point = points[index];
+            minX = Math.Min(minX, point.X);
+            minY = Math.Min(minY, point.Y);
+            maxX = Math.Max(maxX, point.X);
+            maxY = Math.Max(maxY, point.Y);
+        }
+
+        return Rectangle.FromLTRB(minX, minY, maxX + 1, maxY + 1);
     }
 
     public string FormatHexColor(MediaColor color)
     {
-        return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        return FormatHexColor(color.R, color.G, color.B);
     }
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
+    public string FormatHexColor(int r, int g, int b)
+    {
+        return $"#{r:X2}{g:X2}{b:X2}";
+    }
 
-    [DllImport("user32.dll")]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDc);
-
-    [DllImport("gdi32.dll")]
-    private static extern uint GetPixel(IntPtr hDc, int x, int y);
 }

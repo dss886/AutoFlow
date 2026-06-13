@@ -310,7 +310,13 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     private MediaColor GetScreenColor(int x, int y)
     {
-        return _screenColorService?.GetScreenColorOrDefault(x, y, Colors.White) ?? Colors.White;
+        if (_screenColorService is null)
+        {
+            return Colors.White;
+        }
+
+        var color = _screenColorService.GetScreenColors([(x, y)])[0];
+        return MediaColor.FromRgb((byte)color.R, (byte)color.G, (byte)color.B);
     }
 
     private void UpdatePopupPosition(int x, int y)

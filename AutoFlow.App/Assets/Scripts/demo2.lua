@@ -6,7 +6,10 @@ local start_y = 420
 local step = 35
 local steps = 4
 
-host.log("起点颜色: " .. screen.get_color(start_x, start_y))
+local colors = screen.get_color({
+    { x = start_x, y = start_y },
+})
+host.log("起点颜色: " .. colors[1].hex)
 
 mouse.move(start_x, start_y)
 host.sleep(300)
