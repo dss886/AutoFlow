@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Threading;
 using System.Windows.Threading;
 using AutoFlow.App.Models;
 
@@ -7,9 +9,13 @@ namespace AutoFlow.App.Services;
 public sealed class AppLoggerService
 {
     private const int MaxLogLineCount = 3000;
+    private const int FlushBatchSize = 200;
+    private const int TrimBatchSize = 200;
 
     private readonly Dispatcher _dispatcher;
     private readonly ObservableCollection<AppLogEntry> _entries = new();
+    private readonly ConcurrentQueue<AppLogEntry> _pendingEntries = new();
+    private int _isFlushScheduled;
 
     public AppLoggerService()
     {
@@ -51,14 +57,59 @@ public sealed class AppLoggerService
 
     private void Append(AppLogEntry entry)
     {
-        if (!_dispatcher.CheckAccess())
+        _pendingEntries.Enqueue(entry);
+        ScheduleFlush();
+    }
+
+    private void ScheduleFlush()
+    {
+        if (Interlocked.Exchange(ref _isFlushScheduled, 1) == 1)
         {
-            _dispatcher.Invoke(() => Append(entry));
             return;
         }
 
-        _entries.Add(entry);
-        while (_entries.Count > MaxLogLineCount)
+        _dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(FlushPendingEntries));
+    }
+
+    private void FlushPendingEntries()
+    {
+        if (!_dispatcher.CheckAccess())
+        {
+            ScheduleFlush();
+            return;
+        }
+
+        try
+        {
+            var flushedCount = 0;
+            while (flushedCount < FlushBatchSize && _pendingEntries.TryDequeue(out var entry))
+            {
+                _entries.Add(entry);
+                flushedCount++;
+            }
+
+            TrimEntriesIfNeeded();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isFlushScheduled, 0);
+        }
+
+        if (!_pendingEntries.IsEmpty)
+        {
+            ScheduleFlush();
+        }
+    }
+
+    private void TrimEntriesIfNeeded()
+    {
+        if (_entries.Count <= MaxLogLineCount + TrimBatchSize)
+        {
+            return;
+        }
+
+        var removeCount = _entries.Count - MaxLogLineCount;
+        for (var index = 0; index < removeCount; index++)
         {
             _entries.RemoveAt(0);
         }

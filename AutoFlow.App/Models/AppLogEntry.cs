@@ -17,6 +17,8 @@ public enum LogLevel
 
 public sealed record AppLogEntry(DateTime Timestamp, LogSource Source, LogLevel Level, string Message)
 {
+    private string? _formattedText;
+
     public static AppLogEntry CreateSystem(string message, LogLevel level = LogLevel.Info)
     {
         return new AppLogEntry(DateTime.Now, LogSource.System, level, message);
@@ -35,7 +37,7 @@ public sealed record AppLogEntry(DateTime Timestamp, LogSource Source, LogLevel 
 
     public string Format()
     {
-        return $"[{TimestampText}][{LevelLabel}][{SourceLabel}] {Message}";
+        return _formattedText ??= $"[{TimestampText}][{LevelLabel}][{SourceLabel}] {Message}";
     }
 
     private static string GetSourceLabel(LogSource source)

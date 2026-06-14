@@ -11,6 +11,7 @@ public partial class LogPanel : System.Windows.Controls.UserControl
 {
     private INotifyCollectionChanged? _currentLogEntries;
     private MainWindowViewModel? _viewModel;
+    private bool _isScrollToEndQueued;
 
     public LogPanel()
     {
@@ -32,7 +33,7 @@ public partial class LogPanel : System.Windows.Controls.UserControl
             _currentLogEntries = viewModel.LogEntries;
             _currentLogEntries.CollectionChanged += LogEntries_OnCollectionChanged;
             RebuildDocument();
-            ScrollToEnd();
+            QueueScrollToEnd();
         }
         else
         {
@@ -43,11 +44,26 @@ public partial class LogPanel : System.Windows.Controls.UserControl
 
     private void LogEntries_OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        Dispatcher.BeginInvoke(() =>
+        if (!Dispatcher.CheckAccess())
         {
-            RebuildDocument();
-            ScrollToEnd();
-        }, DispatcherPriority.Background);
+            Dispatcher.BeginInvoke(() => LogEntries_OnCollectionChanged(sender, e), DispatcherPriority.Background);
+            return;
+        }
+
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+                AppendEntries(e.NewItems);
+                QueueScrollToEnd();
+                break;
+            case NotifyCollectionChangedAction.Remove when e.OldStartingIndex == 0:
+                RemoveLeadingBlocks(e.OldItems?.Count ?? 0);
+                break;
+            default:
+                RebuildDocument();
+                QueueScrollToEnd();
+                break;
+        }
     }
 
     private void RebuildDocument()
@@ -62,6 +78,47 @@ public partial class LogPanel : System.Windows.Controls.UserControl
         }
 
         LogOutputTextBox.Document = document;
+    }
+
+    private void AppendEntries(System.Collections.IList? entries)
+    {
+        if (entries is null || entries.Count == 0)
+        {
+            return;
+        }
+
+        var document = LogOutputTextBox.Document ?? CreateDocument();
+        if (!ReferenceEquals(LogOutputTextBox.Document, document))
+        {
+            LogOutputTextBox.Document = document;
+        }
+
+        foreach (var item in entries)
+        {
+            if (item is AppLogEntry entry)
+            {
+                document.Blocks.Add(CreateParagraph(entry));
+            }
+        }
+    }
+
+    private void RemoveLeadingBlocks(int count)
+    {
+        if (count <= 0 || LogOutputTextBox.Document is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < count; index++)
+        {
+            var firstBlock = LogOutputTextBox.Document.Blocks.FirstBlock;
+            if (firstBlock is null)
+            {
+                break;
+            }
+
+            LogOutputTextBox.Document.Blocks.Remove(firstBlock);
+        }
     }
 
     private static FlowDocument CreateDocument()
@@ -92,6 +149,21 @@ public partial class LogPanel : System.Windows.Controls.UserControl
             LogLevel.Error => (System.Windows.Media.Brush)FindResource("BrushPrimaryDanger"),
             _ => (System.Windows.Media.Brush)FindResource("BrushWhite87"),
         };
+    }
+
+    private void QueueScrollToEnd()
+    {
+        if (_isScrollToEndQueued)
+        {
+            return;
+        }
+
+        _isScrollToEndQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            _isScrollToEndQueued = false;
+            ScrollToEnd();
+        }));
     }
 
     private void ScrollToEnd()
