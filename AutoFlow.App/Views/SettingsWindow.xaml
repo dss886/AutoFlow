@@ -106,11 +106,18 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <TextBlock Grid.Row="2"
-                   Margin="0,8,0,10"
-                   HorizontalAlignment="Center"
-                   FontSize="11"
-                   Foreground="{StaticResource BrushWhite38}"
-                   Text="{Binding VersionDisplay}" />
+        <StackPanel Grid.Row="2"
+                    Margin="0,8,0,10">
+            <Button Width="160"
+                    HorizontalAlignment="Center"
+                    Click="CheckUpdatesButton_OnClick"
+                    Content="检查更新"
+                    Style="{StaticResource AppButtonPlainStyle}" />
+            <TextBlock Margin="0,12,0,0"
+                       HorizontalAlignment="Center"
+                       FontSize="11"
+                       Foreground="{StaticResource BrushWhite38}"
+                       Text="{Binding VersionDisplay}" />
+        </StackPanel>
     </Grid>
 </Window>

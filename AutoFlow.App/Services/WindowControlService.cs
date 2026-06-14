@@ -22,6 +22,7 @@ public sealed class WindowControlService : IDisposable
     private readonly IEventBus _eventBus;
     private readonly AppLoggerService _logger;
     private readonly LocalSettingsService _localSettingsService;
+    private readonly UpdateCheckService _updateCheckService;
     private readonly IDisposable _toggleSettingsSubscription;
     private readonly IDisposable _closeMainWindowSubscription;
     private Window? _mainWindow;
@@ -29,11 +30,16 @@ public sealed class WindowControlService : IDisposable
     private bool _isSettingsWindowOnLeft;
     private SettingsWindow? _settingsWindow;
 
-    public WindowControlService(IEventBus eventBus, AppLoggerService logger, LocalSettingsService localSettingsService)
+    public WindowControlService(
+        IEventBus eventBus,
+        AppLoggerService logger,
+        LocalSettingsService localSettingsService,
+        UpdateCheckService updateCheckService)
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _localSettingsService = localSettingsService ?? throw new ArgumentNullException(nameof(localSettingsService));
+        _updateCheckService = updateCheckService ?? throw new ArgumentNullException(nameof(updateCheckService));
         _toggleSettingsSubscription = _eventBus.Subscribe<ToggleSettingsWindowRequestedMessage>(_ => ToggleSettingsWindow());
         _closeMainWindowSubscription = _eventBus.Subscribe<CloseMainWindowRequestedMessage>(_ => RequestCloseMainWindow());
     }
@@ -108,7 +114,7 @@ public sealed class WindowControlService : IDisposable
             return;
         }
 
-        _settingsWindow = new SettingsWindow(_eventBus, _logger, _localSettingsService)
+        _settingsWindow = new SettingsWindow(_eventBus, _logger, _localSettingsService, _updateCheckService)
         {
             Owner = _mainWindow,
         };

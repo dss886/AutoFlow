@@ -33,6 +33,8 @@ public partial class App : System.Windows.Application
             SubscribeApplicationMessages(eventBus, window);
             MainWindow = window;
             window.Show();
+            var updater = _serviceProvider.GetRequiredService<UpdateCheckService>();
+            updater.CheckForUpdatesOnStartupAsync();
         }
         catch (Exception ex)
         {
@@ -79,6 +81,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<ScriptCatalogService>();
         services.AddSingleton<ScriptRunnerService>();
         services.AddSingleton<TrayIconService>();
+        services.AddSingleton<UpdateCheckService>();
         services.AddSingleton<WindowControlService>();
         // Utils and view models
         services.AddSingleton<IEventBus, EventBus>();

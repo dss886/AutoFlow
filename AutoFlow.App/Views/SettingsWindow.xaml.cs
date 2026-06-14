@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -17,13 +16,19 @@ public partial class SettingsWindow : Window
     private readonly IEventBus _eventBus;
     private readonly AppLoggerService _logger;
     private readonly LocalSettingsService _localSettingsService;
+    private readonly UpdateCheckService _updateCheckService;
     private ShortcutBindingItem? _capturingItem;
 
-    public SettingsWindow(IEventBus eventBus, AppLoggerService logger, LocalSettingsService localSettingsService)
+    public SettingsWindow(
+        IEventBus eventBus,
+        AppLoggerService logger,
+        LocalSettingsService localSettingsService,
+        UpdateCheckService updateCheckService)
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _localSettingsService = localSettingsService ?? throw new ArgumentNullException(nameof(localSettingsService));
+        _updateCheckService = updateCheckService ?? throw new ArgumentNullException(nameof(updateCheckService));
         InitializeComponent();
         Bindings = CreateBindings(_localSettingsService.LoadHotkeySettings());
         DataContext = this;
@@ -31,23 +36,11 @@ public partial class SettingsWindow : Window
 
     public ObservableCollection<ShortcutBindingItem> Bindings { get; }
 
-    public string VersionDisplay => $"v{CurrentVersion}"
+    public string VersionDisplay => $"v{_updateCheckService.CurrentVersion}"
 #if DEBUG
         + "-debug"
 #endif
         ;
-
-    private static string CurrentVersion
-    {
-        get
-        {
-            var infoVersion = Assembly.GetEntryAssembly()?
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-                .InformationalVersion ?? "0.0.1";
-            var plusIndex = infoVersion.IndexOf('+');
-            return plusIndex >= 0 ? infoVersion[..plusIndex] : infoVersion;
-        }
-    }
 
     private void RebindButton_OnClick(object sender, RoutedEventArgs e)
     {
@@ -80,6 +73,26 @@ public partial class SettingsWindow : Window
     private void CloseButton_OnClick(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private async void CheckUpdatesButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is UIElement element)
+        {
+            element.IsEnabled = false;
+        }
+
+        try
+        {
+            await _updateCheckService.CheckForUpdatesFromSettingsAsync();
+        }
+        finally
+        {
+            if (sender is UIElement target)
+            {
+                target.IsEnabled = true;
+            }
+        }
     }
 
     private void Window_OnClosed(object? sender, EventArgs e)
