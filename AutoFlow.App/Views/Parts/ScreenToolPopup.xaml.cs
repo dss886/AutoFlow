@@ -21,6 +21,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private const double PopupOffsetY = 20;
     private const double PopupPadding = 8;
     private const int MouseHookFallbackDelayMs = 150;
+    private const int MousePositionPollIntervalMs = 24;
     private const int MonitorDefaultToNearest = 2;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoZOrder = 0x0004;
@@ -46,6 +47,9 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private int _observedMouseY;
     private MediaColor _currentColor = Colors.White;
     private ScreenToolColorDisplayFormat _colorDisplayFormat = ScreenToolColorDisplayFormat.Hex;
+    private readonly SolidColorBrush _colorPreviewBrush = new(Colors.White);
+    private Size _cachedPopupSize;
+    private bool _isPopupMeasureInvalidated = true;
 
     public ScreenToolPopup()
     {
@@ -62,10 +66,11 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
         _mousePositionPollTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(16),
+            Interval = TimeSpan.FromMilliseconds(MousePositionPollIntervalMs),
         };
         _mousePositionPollTimer.Tick += MousePositionPollTimer_OnTick;
 
+        ColorPreviewBorder.Background = _colorPreviewBrush;
         RefreshContent();
     }
 
@@ -225,6 +230,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     {
         if (IsToolVisible)
         {
+            InvalidatePopupMeasure();
             PopupRoot.IsOpen = true;
             _mouseHookFallbackTimer.Start();
             UpdateMousePosition();
@@ -247,6 +253,12 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
     private void UpdateMousePosition(int x, int y)
     {
         RememberObservedMousePosition(x, y);
+
+        if (x == _currentMouseX && y == _currentMouseY)
+        {
+            return;
+        }
+
         UpdateContent(x, y, GetScreenColor(x, y));
         UpdatePopupPosition(x, y);
     }
@@ -281,9 +293,24 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
     private void RefreshContent()
     {
-        CoordinateTextBlock.Text = FormatCoordinate(_currentMouseX, _currentMouseY);
-        ColorTextBlock.Text = FormatColorValue(_currentColor);
-        ColorPreviewBorder.Background = new SolidColorBrush(_currentColor);
+        var coordinateText = FormatCoordinate(_currentMouseX, _currentMouseY);
+        if (!string.Equals(CoordinateTextBlock.Text, coordinateText, StringComparison.Ordinal))
+        {
+            CoordinateTextBlock.Text = coordinateText;
+            InvalidatePopupMeasure();
+        }
+
+        var colorText = FormatColorValue(_currentColor);
+        if (!string.Equals(ColorTextBlock.Text, colorText, StringComparison.Ordinal))
+        {
+            ColorTextBlock.Text = colorText;
+            InvalidatePopupMeasure();
+        }
+
+        if (_colorPreviewBrush.Color != _currentColor)
+        {
+            _colorPreviewBrush.Color = _currentColor;
+        }
     }
 
     private string FormatColorValue(MediaColor color)
@@ -315,7 +342,7 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
             return Colors.White;
         }
 
-        var color = _screenColorService.GetScreenColors([(x, y)])[0];
+        var color = _screenColorService.GetScreenColor(x, y);
         return MediaColor.FromRgb((byte)color.R, (byte)color.G, (byte)color.B);
     }
 
@@ -326,15 +353,13 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
             return;
         }
 
-        PopupContentRoot.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        PopupContentRoot.UpdateLayout();
+        var popupSize = GetPopupSize();
 
-        if (TryPositionPopupInDevicePixels(x, y, PopupContentRoot.DesiredSize))
+        if (TryPositionPopupInDevicePixels(x, y, popupSize))
         {
             return;
         }
 
-        var popupSize = PopupContentRoot.DesiredSize;
         var cursorPosition = TransformFromDevicePixels(x, y);
         var workArea = Screen.FromPoint(new DrawingPoint(x, y)).WorkingArea;
         var workAreaTopLeft = TransformFromDevicePixels(workArea.Left, workArea.Top);
@@ -350,6 +375,20 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
 
         PopupRoot.HorizontalOffset = popupLeft;
         PopupRoot.VerticalOffset = popupTop;
+    }
+
+    private Size GetPopupSize()
+    {
+        if (!_isPopupMeasureInvalidated && _cachedPopupSize.Width > 0 && _cachedPopupSize.Height > 0)
+        {
+            return _cachedPopupSize;
+        }
+
+        PopupContentRoot.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        PopupContentRoot.UpdateLayout();
+        _cachedPopupSize = PopupContentRoot.DesiredSize;
+        _isPopupMeasureInvalidated = false;
+        return _cachedPopupSize;
     }
 
     private bool TryPositionPopupInDevicePixels(int x, int y, Size popupSizeDip)
@@ -477,7 +516,17 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
             return;
         }
 
-        UpdateMousePosition();
+        if (!GetCursorPos(out var point))
+        {
+            return;
+        }
+
+        if (point.X == _currentMouseX && point.Y == _currentMouseY)
+        {
+            return;
+        }
+
+        UpdateMousePosition(point.X, point.Y);
     }
 
     private void MouseHookFallbackTimer_OnTick(object? sender, EventArgs e)
@@ -524,6 +573,11 @@ public partial class ScreenToolPopup : System.Windows.Controls.UserControl
         _isMousePollFallbackActive = false;
         _mouseHookFallbackTimer.Stop();
         _mousePositionPollTimer.Stop();
+    }
+
+    private void InvalidatePopupMeasure()
+    {
+        _isPopupMeasureInvalidated = true;
     }
 
     private void RememberObservedMousePosition(int x, int y)

@@ -9,6 +9,7 @@ namespace AutoFlow.App.Services;
 public sealed class ScreenColorService
 {
     private const int BytesPerPixel = 4;
+    private static readonly Rectangle SinglePixelBounds = new(0, 0, 1, 1);
     private readonly ScreenCaptureService _screenCaptureService;
 
     public ScreenColorService(ScreenCaptureService screenCaptureService)
@@ -32,6 +33,29 @@ public sealed class ScreenColorService
             captureBounds.Width,
             captureBounds.Height);
         return ReadColorsFromCapture(capture, captureBounds, points);
+    }
+
+    public (int R, int G, int B, string Hex) GetScreenColor(int x, int y)
+    {
+        using var capture = _screenCaptureService.CaptureRegion(x, y, 1, 1);
+        var bitmapData = capture.LockBits(
+            SinglePixelBounds,
+            ImageLockMode.ReadOnly,
+            PixelFormat.Format32bppArgb);
+
+        try
+        {
+            var pixel = Marshal.ReadInt32(bitmapData.Scan0);
+            var blue = pixel & 0xFF;
+            var green = (pixel >> 8) & 0xFF;
+            var red = (pixel >> 16) & 0xFF;
+
+            return (red, green, blue, FormatHexColor(red, green, blue));
+        }
+        finally
+        {
+            capture.UnlockBits(bitmapData);
+        }
     }
 
     private IReadOnlyList<(int R, int G, int B, string Hex)> ReadColorsFromCapture(

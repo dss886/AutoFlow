@@ -102,7 +102,7 @@ public sealed class InputRecordingSession
 
     private (int R, int G, int B, string Hex) ReadScreenColor(int x, int y)
     {
-        return _screenColorService.GetScreenColors([(x, y)])[0];
+        return _screenColorService.GetScreenColor(x, y);
     }
 
     private List<ScriptAction> BuildScriptActions(long stopTimestamp)
