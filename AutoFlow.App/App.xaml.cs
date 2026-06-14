@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using AutoFlow.App.Infrastructure;
@@ -6,14 +5,11 @@ using AutoFlow.App.Models;
 using AutoFlow.App.Services;
 using AutoFlow.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using Velopack;
 
 namespace AutoFlow.App;
 
 public partial class App : System.Windows.Application
 {
-    private const string UpdateUrl = "https://github.com/dss886/AutoFlow/releases/latest/download";
-
     private ServiceProvider? _serviceProvider;
     private readonly List<IDisposable> _eventSubscriptions = [];
 
@@ -43,8 +39,6 @@ public partial class App : System.Windows.Application
             HandleFatalException("应用启动", ex);
             Shutdown(-1);
         }
-
-        _ = Task.Run(CheckForUpdatesAsync);
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -177,49 +171,5 @@ public partial class App : System.Windows.Application
     {
         window.PrepareForExit();
         window.Close();
-    }
-
-    private static string CurrentVersion =>
-        Assembly.GetEntryAssembly()?
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion ?? "0.0.1";
-
-    private async Task CheckForUpdatesAsync()
-    {
-        try
-        {
-            var mgr = new UpdateManager(UpdateUrl);
-            var result = await mgr.CheckForUpdatesAsync();
-            if (result is null)
-            {
-                return;
-            }
-
-            var shouldUpdate = false;
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-                var message = $"发现新版本 {result.TargetFullRelease.Version}（当前 {CurrentVersion}），是否立即更新？";
-                var choice = System.Windows.MessageBox.Show(
-                    message,
-                    "AutoFlow 更新",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Information);
-
-                shouldUpdate = choice == MessageBoxResult.Yes;
-            });
-
-            if (!shouldUpdate)
-            {
-                return;
-            }
-
-            await mgr.DownloadUpdatesAsync(result);
-            mgr.ApplyUpdatesAndRestart(result);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"更新检查失败: {ex.Message}");
-        }
     }
 }

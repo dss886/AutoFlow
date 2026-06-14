@@ -95,7 +95,7 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 
 ### 打包发布
 
-本项目使用 [MinVer](https://github.com/adamralph/minver) 自动管理版本号，使用 [Velopack](https://github.com/velopack/velopack) 打包并支持自动更新。
+本项目使用 [MinVer](https://github.com/adamralph/minver) 自动管理版本号，并生成便携版单文件发布包。
 
 #### 本地打包
 
@@ -108,9 +108,7 @@ dotnet run --project .\AutoFlow.App\AutoFlow.App.csproj
 | 文件 | 用途 |
 |------|------|
 | `AutoFlow.exe` | 可执行文件 |
-| `RELEASES` | Velopack 更新清单 |
-| `AutoFlow-x.y.z-win.nupkg` | Velopack 安装包 |
-| `AutoFlow-x.y.z-delta.nupkg` | 增量更新包（如有） |
+| `AutoFlow-vx.y.z-win-x64.zip` | 发布压缩包 |
 
 #### 发布新版本
 
@@ -126,7 +124,7 @@ git tag v1.0.0-beta.1
 git push origin v1.0.0-beta.1
 ```
 
-CI 会自动完成：构建 → Velopack 打包 → 上传到 GitHub Release。客户端下次启动时将自动检测并提示更新。
+CI 会自动完成：构建 → 压缩打包 → 上传到 GitHub Release。用户下载新版压缩包后手动替换即可完成更新。
 
 ## 📖 Lua API 参考
 

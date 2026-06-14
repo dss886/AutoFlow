@@ -30,9 +30,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Install vpk tool
-        run: dotnet tool install vpk --tool-path ./vpk-tools --version 0.0.1298 --framework net8.0
-
       - name: Publish app
         run: dotnet publish AutoFlow.App/AutoFlow.App.csproj -c Release -r win-x64 -o publish/win-x64
 
@@ -57,42 +54,11 @@ jobs:
           }
           echo "value=$ver" >> $env:GITHUB_OUTPUT
 
-      - name: Velopack pack
-        run: >
-          ./vpk-tools/vpk pack
-          --packId AutoFlow
-          --packVersion ${{ steps.version.outputs.value }}
-          --packDir publish/win-x64
-          --outputDir publish/win-x64
-          --mainExe AutoFlow.exe
-          --packTitle AutoFlow
-          --channel win
-          --noInst
-
-      - name: Verify pack outputs
+      - name: Create ZIP
         shell: pwsh
         run: |
-          Write-Host "Verifying pack outputs in publish/win-x64..."
-          Get-ChildItem publish/win-x64 -Filter "AutoFlow-*" | ForEach-Object { Write-Host "  $($_.Name)" }
-          if (-not (Test-Path publish/win-x64/RELEASES)) {
-            Write-Host "::error::RELEASES file not found!"
-            exit 1
-          }
-          $nupkg = Get-ChildItem publish/win-x64 -Filter "AutoFlow-*.nupkg"
-          if (-not $nupkg) {
-            Write-Host "::error::No .nupkg file found!"
-            exit 1
-          }
-          Write-Host "Pack outputs verified successfully."
-
-      - name: Rename EXE and create ZIP
-        shell: pwsh
-        run: |
-          $renamed = "AutoFlow-v${{ steps.version.outputs.value }}-win-x64.exe"
-          Rename-Item -Path publish/win-x64/AutoFlow.exe -NewName $renamed
-          Write-Host "Renamed: AutoFlow.exe -> $renamed"
           $zipName = "AutoFlow-v${{ steps.version.outputs.value }}-win-x64.zip"
-          Compress-Archive -Path publish/win-x64/$renamed -DestinationPath publish/win-x64/$zipName
+          Compress-Archive -Path publish/win-x64/AutoFlow.exe -DestinationPath publish/win-x64/$zipName
           Write-Host "Created: $zipName"
 
       - name: Upload to GitHub Release
@@ -101,8 +67,5 @@ jobs:
           tag_name: v${{ steps.version.outputs.value }}
           files: |
             publish/win-x64/AutoFlow-v*-win-x64.zip
-            publish/win-x64/RELEASES
-            publish/win-x64/AutoFlow-*.nupkg
-            publish/win-x64/AutoFlow-*.delta
           fail_on_unmatched_files: false
           generate_release_notes: true
